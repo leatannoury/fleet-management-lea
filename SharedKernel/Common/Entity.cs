@@ -1,7 +1,7 @@
 ﻿//entity=object with identity
 //entities are different even if they have same data (they have diff id)
 //vehicle, driver, trip, triplog
-
+//ex: cars can have same model, year, color, but they are still different cars each one has an ID => different entities
 
 namespace SharedKernel.Common;
 
