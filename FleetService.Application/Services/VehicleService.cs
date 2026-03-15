@@ -7,18 +7,27 @@ using FleetService.Application.DTOs;
 using FleetService.Application.Requests;
 using FleetService.Domain.Entities;
 using FleetService.Domain.Enums;
+using FleetService.Application.Interfaces;
 using SharedKernel.ValueObjects;
+
 
 namespace FleetService.Application.Services;
 
 public class VehicleService
 {
-    private readonly List<Vehicle> _vehicles = new();//temporary now later postgre
+    private readonly IVehicleRepository _repository;
 
-    public VehicleDto CreateVehicle(CreateVehicleRequest request)
+    public VehicleService(IVehicleRepository repository)//dependency injection
+    {
+        _repository = repository;
+    }
+
+    //create vehicle
+    public async Task<VehicleDto> CreateVehicle(CreateVehicleRequest request)
     {
         //controller receives json, it becomes CreateVehicleRequest, the service convert it to a domain entity, and return a dto
         
+        //convert input to domain entity
         var vehicle = new Vehicle(
             new PlateNumber(request.PlateNumber),
             request.Model,
@@ -26,7 +35,7 @@ public class VehicleService
             request.Type
         );
 
-        _vehicles.Add(vehicle);
+        await _repository.AddAsync(vehicle);
 
         return new VehicleDto
         {
@@ -40,10 +49,15 @@ public class VehicleService
             DriverId = vehicle.DriverId
         };
     }
-
-    public List<VehicleDto> GetVehicles()
+    
+    
+    //get all vehicles
+    public async Task<List<VehicleDto>> GetVehicles()
     {
-        return _vehicles.Select(v => new VehicleDto
+        var vehicles = await _repository.GetAllAsync();
+
+        //convert to dto
+        return vehicles.Select(v => new VehicleDto
         {
             Id = v.Id,
             PlateNumber = v.PlateNumber.Value,

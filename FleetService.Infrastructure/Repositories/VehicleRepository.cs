@@ -2,13 +2,16 @@
 //services dont call dbcontext directly
 //instead: VehicleService → VehicleRepository → DbContext
 
+//database access
+
 using FleetService.Domain.Entities;
 using FleetService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using FleetService.Application.Interfaces;
 
 namespace FleetService.Infrastructure.Repositories;
 
-public class VehicleRepository
+public class VehicleRepository : IVehicleRepository
 {
     private readonly FleetDbContext _context; //db connection object
 
