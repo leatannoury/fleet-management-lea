@@ -38,7 +38,7 @@ public class FleetDbContext : DbContext
             }); //plate number is a value object not a string. ef can't store objects directly,
                 //so ownsone() tells ef to the the properties of the value object in the same table
 
-            entity.HasIndex(v => v.PlateNumber).IsUnique();//make a unique index  so 2 plates can't have the same plate number
+            entity.HasIndex("PlateNumber").IsUnique();//make a unique index  so 2 plates can't have the same plate number
             
             //required properties - cant be null
             entity.Property(v => v.Model).IsRequired();
@@ -61,7 +61,7 @@ public class FleetDbContext : DbContext
             });//license number is a value object not a string. ef can't store objects directly,
             //so ownsone() tells ef to the the properties of the value object in the same table
 
-            entity.HasIndex(d => d.LicenseNumber).IsUnique();//make a unique index  so 2 drivers can't have the same license number
+            entity.HasIndex("LicenseNumber").IsUnique();//make a unique index  so 2 drivers can't have the same license number
             
             //required fields- cant be null
             entity.Property(d => d.FirstName).IsRequired();
