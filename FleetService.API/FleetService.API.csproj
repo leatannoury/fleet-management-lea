@@ -9,10 +9,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FleetService.Application\FleetService.Application.csproj" />
+    <ProjectReference Include="..\FleetService.Infrastructure\FleetService.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
