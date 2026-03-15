@@ -1,4 +1,4 @@
-﻿//represents vehicle lifecycle state machine
+﻿//represents vehicle lifecycle state 
 //lifecycle: Registered → Active → InMaintenance → Decommissioned
 
 namespace FleetService.Domain.Enums;
