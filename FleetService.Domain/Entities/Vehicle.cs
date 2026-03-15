@@ -19,6 +19,11 @@ public class Vehicle : AggregateRoot //aggregate root ->main root entity->contro
     public decimal Mileage { get; private set; }
     public Guid? DriverId { get; private set; }
     
+        
+    private Vehicle() //constructor
+    {
+    }
+    
     //constructor
     public Vehicle(PlateNumber plateNumber, string model, int year, VehicleType type)
     {
@@ -30,6 +35,7 @@ public class Vehicle : AggregateRoot //aggregate root ->main root entity->contro
         Status = VehicleStatus.Registered; //each vehicle starts with a registered state
         Mileage = 0;//vehicle starts with 0 mileage
     }
+
     
     //methods to enforce transitions between vehicle states
 

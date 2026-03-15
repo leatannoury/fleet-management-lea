@@ -18,6 +18,9 @@ public class Driver : AggregateRoot //driver is root of the driver aggregate
     public DriverStatus Status { get; private set; }
     public Guid? VehicleId { get; private set; }
     
+    private Driver() //constructor
+    {
+    }
     
     //constructor
     public Driver(string firstName, string lastName,LicenseNumber licenseNumber,DateTime licenseExpiry)
@@ -29,6 +32,7 @@ public class Driver : AggregateRoot //driver is root of the driver aggregate
 
         Status = DriverStatus.Available; //a new driver is available at first
     }
+    
     
     //methods to enforce drivers rules
     //rules live in domain classes not in controllers
