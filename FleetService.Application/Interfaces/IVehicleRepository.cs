@@ -10,4 +10,6 @@ public interface IVehicleRepository
     Task AddAsync(Vehicle vehicle); //add a vehicle
     Task<List<Vehicle>> GetAllAsync();//get all vehicle
     Task<Vehicle?> GetByIdAsync(Guid id);//get vehicle by id
+    Task UpdateAsync(Vehicle vehicle);//update a vehicle
+    Task DeleteAsync(Vehicle vehicle);//delete a vehicle
 }

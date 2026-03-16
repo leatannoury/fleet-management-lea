@@ -90,4 +90,42 @@ public class VehicleService
             DriverId = vehicle.DriverId
         };
     }
+    
+    //update a vehicle
+    public async Task<VehicleDto?> UpdateVehicle(Guid id, UpdateVehicleRequest request)
+    {
+        var vehicle = await _repository.GetByIdAsync(id);//send to repository - find the vehicle by id
+
+        if (vehicle == null)//check if null
+            return null;
+
+        vehicle.UpdateDetails(request.Model, request.Year, (VehicleType)request.Type);//domain entities control their own state changes-we dont update directly from service
+
+        await _repository.UpdateAsync(vehicle);//send to repository - update vehicle
+
+        return new VehicleDto
+        {
+            Id = vehicle.Id,
+            PlateNumber = vehicle.PlateNumber.Value,
+            Model = vehicle.Model,
+            Year = vehicle.Year,
+            Type = vehicle.Type,
+            Status = vehicle.Status,
+            Mileage = vehicle.Mileage,
+            DriverId = vehicle.DriverId
+        };
+    }
+    
+    //delete a vehicle
+    public async Task<bool> DeleteVehicle(Guid id)
+    {
+        var vehicle = await _repository.GetByIdAsync(id);//send to repository-find the vehicle we want to delete
+
+        if (vehicle == null)//check if null
+            return false;
+
+        await _repository.DeleteAsync(vehicle);//send to repository-delete vehicle
+
+        return true;
+    }
 }

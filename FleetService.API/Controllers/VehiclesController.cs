@@ -47,4 +47,28 @@ public class VehiclesController : ControllerBase
 
         return Ok(vehicle);
     }
+    
+    //update a vehicle
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateVehicle(Guid id, UpdateVehicleRequest request)
+    {
+        var vehicle = await _vehicleService.UpdateVehicle(id, request);//send to service
+
+        if (vehicle == null)//check if null
+            return NotFound();
+
+        return Ok(vehicle);
+    }
+    
+    //delete a vehicle
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteVehicle(Guid id)
+    {
+        var result = await _vehicleService.DeleteVehicle(id);//send to service
+
+        if (!result)//check if empty
+            return NotFound();
+
+        return NoContent();
+    }
 }

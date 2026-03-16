@@ -27,7 +27,7 @@ public class VehicleRepository : IVehicleRepository
     public async Task AddAsync(Vehicle vehicle)
     {
         await _context.Vehicles.AddAsync(vehicle);//add the vehicle in the vehicle table in db
-        await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync();//save
     }
 
     //retreive all vehicles from db
@@ -40,5 +40,19 @@ public class VehicleRepository : IVehicleRepository
     public async Task<Vehicle?> GetByIdAsync(Guid id)
     {
         return await _context.Vehicles.FirstOrDefaultAsync(v => v.Id == id);
+    }
+    
+    //update a vehicle
+    public async Task UpdateAsync(Vehicle vehicle)
+    {
+        _context.Vehicles.Update(vehicle);//update
+        await _context.SaveChangesAsync();//save
+    }
+
+    //delete a vehicle
+    public async Task DeleteAsync(Vehicle vehicle)
+    {
+        _context.Vehicles.Remove(vehicle);//delete
+        await _context.SaveChangesAsync();//save
     }
 }

@@ -97,4 +97,11 @@ public class Vehicle : AggregateRoot //aggregate root ->main root entity->contro
     {
         Mileage += distance;
     }
+    
+    public void UpdateDetails(string model, int year, VehicleType type)//update a vehicle
+    {
+        Model = model;
+        Year = year;
+        Type = type;
+    }
 }
