@@ -85,4 +85,16 @@ public class VehiclesController : ControllerBase
 
         return Ok();
     }
+    
+    //unassign driver from vehilce
+    [HttpPost("{id}/unassign-driver")]
+    public async Task<IActionResult> UnassignDriver(Guid id)
+    {
+        var result = await _vehicleService.UnassignDriver(id);//send to service-unassign driver
+
+        if (!result)//check if empty
+            return NotFound();
+
+        return Ok();
+    }
 }

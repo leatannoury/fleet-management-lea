@@ -151,4 +151,30 @@ public class VehicleService
 
         return true;
     }
+    
+    //unassign driver from vehicle
+    public async Task<bool> UnassignDriver(Guid vehicleId)
+    {
+        var vehicle = await _repository.GetByIdAsync(vehicleId);//send to repository-get the vehicle by id 
+
+        if (vehicle == null)//check if null
+            return false;
+
+        if (vehicle.DriverId == null)//check if already doesnt have a driver
+            return false;
+
+        var driver = await _driverRepository.GetByIdAsync(vehicle.DriverId.Value);//send to repository-get driver by id
+
+        vehicle.UnassignDriver();//unassign driver from vehicle
+
+        if (driver != null)//check if driver is not null
+            driver.UnassignVehicle();//unassign vehicle from driver
+
+        await _repository.UpdateAsync(vehicle);//send to repository-update vehicle
+
+        if (driver != null)
+            await _driverRepository.UpdateAsync(driver);//send to repository-update driver
+
+        return true;
+    }
 }
