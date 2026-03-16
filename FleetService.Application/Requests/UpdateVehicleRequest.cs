@@ -4,9 +4,9 @@ namespace FleetService.Application.Requests;
 
 public class UpdateVehicleRequest
 {
-    public string Model { get; set; }
+    public string? Model { get; set; }
 
-    public int Year { get; set; }
+    public int? Year { get; set; }
 
-    public int Type { get; set; }
+    public int? Type { get; set; }
 }
