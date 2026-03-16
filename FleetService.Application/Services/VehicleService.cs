@@ -16,10 +16,12 @@ namespace FleetService.Application.Services;
 public class VehicleService
 {
     private readonly IVehicleRepository _repository;
+    private readonly IDriverRepository _driverRepository;
 
-    public VehicleService(IVehicleRepository repository)//dependency injection
+    public VehicleService(IVehicleRepository repository, IDriverRepository driverRepository)//constructor-dependency injection
     {
         _repository = repository;
+        _driverRepository = driverRepository;
     }
 
     //create vehicle
@@ -125,6 +127,27 @@ public class VehicleService
             return false;
 
         await _repository.DeleteAsync(vehicle);//send to repository-delete vehicle
+
+        return true;
+    }
+    
+    //assign driver to a vehicle
+    public async Task<bool> AssignDriver(Guid vehicleId, Guid driverId)
+    {
+        var vehicle = await _repository.GetByIdAsync(vehicleId);//send to repository-get the vehicle by id
+        if (vehicle == null)//check if null
+            return false;
+
+        var driver = await _driverRepository.GetByIdAsync(driverId);//send to repository-get driver by id
+        if (driver == null)//check if null
+            return false;
+
+        //domain logic
+        vehicle.AssignDriver(driver.Id); //assign driver to vehicle
+        driver.AssignVehicle(vehicle.Id);//assign vehicle to driver
+
+        await _repository.UpdateAsync(vehicle);//send to repository-update vehivle details
+        await _driverRepository.UpdateAsync(driver);//send to repository-update driver details
 
         return true;
     }

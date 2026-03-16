@@ -73,4 +73,16 @@ public class VehiclesController : ControllerBase
 
         return NoContent();
     }
+    
+    //assign driver to vehicle
+    [HttpPost("{id}/assign-driver")]
+    public async Task<IActionResult> AssignDriver(Guid id, AssignDriverRequest request)
+    {
+        var result = await _vehicleService.AssignDriver(id, request.DriverId);//send to service
+
+        if (!result)//check if empty
+            return NotFound();
+
+        return Ok();
+    }
 }
