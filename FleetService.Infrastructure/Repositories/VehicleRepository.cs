@@ -4,6 +4,8 @@
 
 //database access
 
+//get the request from service and interact with the db
+
 using FleetService.Domain.Entities;
 using FleetService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -21,14 +23,22 @@ public class VehicleRepository : IVehicleRepository
         _context = context;
     }
 
-    public async Task AddAsync(Vehicle vehicle)//add vehicle to db
+    //add vehicle to db
+    public async Task AddAsync(Vehicle vehicle)
     {
         await _context.Vehicles.AddAsync(vehicle);//add the vehicle in the vehicle table in db
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<Vehicle>> GetAllAsync()//retreive all vehicles from db
+    //retreive all vehicles from db
+    public async Task<List<Vehicle>> GetAllAsync()
     {
         return await _context.Vehicles.ToListAsync();
+    }
+    
+    //get vehicle by id
+    public async Task<Vehicle?> GetByIdAsync(Guid id)
+    {
+        return await _context.Vehicles.FirstOrDefaultAsync(v => v.Id == id);
     }
 }

@@ -35,7 +35,7 @@ public class VehicleService
             request.Type
         );
 
-        await _repository.AddAsync(vehicle);
+        await _repository.AddAsync(vehicle);//send to repository
 
         return new VehicleDto
         {
@@ -54,7 +54,7 @@ public class VehicleService
     //get all vehicles
     public async Task<List<VehicleDto>> GetVehicles()
     {
-        var vehicles = await _repository.GetAllAsync();
+        var vehicles = await _repository.GetAllAsync();//send to repository
 
         //convert to dto
         return vehicles.Select(v => new VehicleDto
@@ -68,5 +68,26 @@ public class VehicleService
             Mileage = v.Mileage,
             DriverId = v.DriverId
         }).ToList();
+    }
+    
+    //get vehicle by id
+    public async Task<VehicleDto?> GetVehicle(Guid id)
+    {
+        var vehicle = await _repository.GetByIdAsync(id);//send to repository
+
+        if (vehicle == null)//check if null
+            return null;
+
+        return new VehicleDto
+        {
+            Id = vehicle.Id,
+            PlateNumber = vehicle.PlateNumber.Value,
+            Model = vehicle.Model,
+            Year = vehicle.Year,
+            Type = vehicle.Type,
+            Status = vehicle.Status,
+            Mileage = vehicle.Mileage,
+            DriverId = vehicle.DriverId
+        };
     }
 }
