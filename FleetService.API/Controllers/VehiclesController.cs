@@ -48,6 +48,7 @@ public class VehiclesController : ControllerBase
         return Ok(vehicle);
     }
     
+    //PUT /api/vehicles/{id}
     //update a vehicle
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateVehicle(Guid id, UpdateVehicleRequest request)
@@ -60,6 +61,7 @@ public class VehiclesController : ControllerBase
         return Ok(vehicle);
     }
     
+    //DELETE /api/vehicles/{id}
     //delete a vehicle
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteVehicle(Guid id)

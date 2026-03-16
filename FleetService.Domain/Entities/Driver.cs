@@ -68,4 +68,11 @@ public class Driver : AggregateRoot //driver is root of the driver aggregate
     {
         Status = DriverStatus.Available;//when the trip finishes the driver's status becomes available
     }
+    
+    public void UpdateDetails(string firstName, string lastName, DateTime licenseExpiry)//update a driver
+    {
+        FirstName = firstName;
+        LastName = lastName;
+        LicenseExpiry = licenseExpiry;
+    }
 }

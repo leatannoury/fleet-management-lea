@@ -33,4 +33,24 @@ public class DriverRepository: IDriverRepository
     {
         return await _context.Drivers.ToListAsync();
     }
+    
+    //get driver by id
+    public async Task<Driver?> GetByIdAsync(Guid id)
+    {
+        return await _context.Drivers.FirstOrDefaultAsync(d => d.Id == id);
+    }
+
+    //update a driver
+    public async Task UpdateAsync(Driver driver)
+    {
+        _context.Drivers.Update(driver);//update
+        await _context.SaveChangesAsync();//save
+    }
+
+    //delete a driver
+    public async Task DeleteAsync(Driver driver)
+    {
+        _context.Drivers.Remove(driver);//delete
+        await _context.SaveChangesAsync();//save
+    }
 }

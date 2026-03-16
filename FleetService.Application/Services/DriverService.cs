@@ -68,4 +68,61 @@ public class DriverService
             VehicleId = d.VehicleId
         }).ToList();
     }
+    
+    //get driver by id
+    public async Task<DriverDto?> GetDriver(Guid id)
+    {
+        var driver = await _repository.GetByIdAsync(id);//send to repository
+
+        if (driver == null)//check if null
+            return null;
+
+        return new DriverDto
+        {
+            Id = driver.Id,
+            FirstName = driver.FirstName,
+            LastName = driver.LastName,
+            LicenseNumber = driver.LicenseNumber.Value,
+            LicenseExpiry = driver.LicenseExpiry,
+            Status = driver.Status,
+            VehicleId = driver.VehicleId
+        };
+    }
+    
+    //update a driver
+    public async Task<DriverDto?> UpdateDriver(Guid id, UpdateDriverRequest request)
+    {
+        var driver = await _repository.GetByIdAsync(id);//send to repository-find the driver we want to update
+
+        if (driver == null)//check if null
+            return null;
+
+        driver.UpdateDetails(request.FirstName, request.LastName, request.LicenseExpiry);//domain entities control their own state changes-we dont update directly from service
+
+        await _repository.UpdateAsync(driver);//send to repository-update
+
+        return new DriverDto
+        {
+            Id = driver.Id,
+            FirstName = driver.FirstName,
+            LastName = driver.LastName,
+            LicenseNumber = driver.LicenseNumber.Value,
+            LicenseExpiry = driver.LicenseExpiry,
+            Status = driver.Status,
+            VehicleId = driver.VehicleId
+        };
+    }
+    
+    //delete a driver
+    public async Task<bool> DeleteDriver(Guid id)
+    {
+        var driver = await _repository.GetByIdAsync(id);//send to repository-find the driver we want to delete
+
+        if (driver == null)//check if null
+            return false;
+
+        await _repository.DeleteAsync(driver);//send to repository-delete
+
+        return true;
+    }
 }
