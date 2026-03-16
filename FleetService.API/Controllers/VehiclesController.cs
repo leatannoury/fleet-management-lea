@@ -97,4 +97,13 @@ public class VehiclesController : ControllerBase
 
         return Ok();
     }
+    
+    //change vehicle status
+    [HttpPost("{id}/change-status")]
+    public async Task<IActionResult> ChangeStatus(Guid id, ChangeVehicleStatusRequest request)
+    {
+        await _vehicleService.ChangeVehicleStatus(id, request.Status);//send to service
+
+        return Ok();
+    }
 }

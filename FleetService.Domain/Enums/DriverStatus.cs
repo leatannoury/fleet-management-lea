@@ -1,5 +1,5 @@
 ﻿//represent the status of the driver
-//h ecan be: Available, OnTrip, Inactive
+//he can be: Available, OnTrip, Inactive
 
 namespace FleetService.Domain.Enums;
 

@@ -8,6 +8,7 @@ using FleetService.Application.Requests;
 using FleetService.Domain.Entities;
 using FleetService.Domain.Enums;
 using FleetService.Application.Interfaces;
+using SharedKernel.Exceptions;
 using SharedKernel.ValueObjects;
 
 
@@ -177,4 +178,47 @@ public class VehicleService
 
         return true;
     }
+    
+    //change the status of a vehicle
+    public async Task ChangeVehicleStatus(Guid vehicleId, VehicleStatus status)
+    {
+        var vehicle = await _repository.GetByIdAsync(vehicleId);//send to repository-get the vehicle by id
+
+        if (vehicle == null)//check if vehicle exists
+            throw new Exception("Vehicle not found");//if it does not exist throw validation
+
+        switch (status) //switch case for statuses
+        {
+            case VehicleStatus.Active: //if we want to change status to active - can only be changed to active if it is registered or in maintenance
+
+                if(vehicle.Status == VehicleStatus.Registered)//see if its status is registered
+                    vehicle.Activate(); //call the activate method
+
+                else if(vehicle.Status == VehicleStatus.InMaintenance)//see if its status is in maintenance
+                    vehicle.CompleteMaintenance();
+
+                else
+                    throw new InvalidStateTransitionException(
+                        "Vehicle cannot transition to Active");
+
+                break;
+
+            case VehicleStatus.InMaintenance: //if we want to change status to in maintenance
+                vehicle.RequestMaintenance();//allowed if status=active
+                break;
+
+            case VehicleStatus.Decommissioned: //if we want to change status to decommissioned
+                vehicle.Decommission();//allowed if status=in maintenance
+                break;
+
+            case VehicleStatus.Registered:
+                throw new Exception("Cannot manually revert to Registered");
+
+            default:
+                throw new Exception("Invalid status transition"); //unexpected cases
+        }
+
+        await _repository.UpdateAsync(vehicle);//send to repository-update vehicle
+    }
+    
 }

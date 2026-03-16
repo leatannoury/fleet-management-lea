@@ -39,22 +39,22 @@ public class Vehicle : AggregateRoot //aggregate root ->main root entity->contro
     
     //methods to enforce transitions between vehicle states
 
-    public void Activate() //registered → active
+    public void Activate() //registered → active - only allowed to be activated from registered
     {
         if (Status != VehicleStatus.Registered) //see if status is not registered
             throw new InvalidStateTransitionException(
                 "Vehicle can only be activated from Registered state."); //throw exception
 
-        Status = VehicleStatus.Active; //else set status active
+        Status = VehicleStatus.Active; // set status active
     }
 
-    public void RequestMaintenance() //active → in maintenance
+    public void RequestMaintenance() //active → in maintenance - only can be put in maintenance if it is active
     {
         if (Status != VehicleStatus.Active) //check if ststus is NOT active
             throw new InvalidStateTransitionException(
                 "Maintenance can only be requested when vehicle is Active.");//throw exception
 
-        Status = VehicleStatus.InMaintenance;//else put status as in maintenance
+        Status = VehicleStatus.InMaintenance;// put status as in maintenance
     }
 
     public void CompleteMaintenance() //in manitenance -> active
@@ -66,15 +66,19 @@ public class Vehicle : AggregateRoot //aggregate root ->main root entity->contro
         Status = VehicleStatus.Active;//if status maintenance then change is to active
     }
 
-    public void Decommission() //vehicle cant be decommisioned if the driver is assigned
+    public void Decommission() //vehicle cant be decommisioned if the driver is assigned - can be decommissioned only if active, or in maintenance
     {
+        if (Status == VehicleStatus.Decommissioned) //see if vehicle status is already decomminisioned - can't decommission twice
+            throw new InvalidStateTransitionException(
+                "Vehicle is already decommissioned."); //throw exception
+        
         if (DriverId != null) //see if the driver id is not null - it has a driver
             throw new InvalidStateTransitionException(
                 "Vehicle cannot be decommissioned while a driver is assigned."); //throw exception
 
-        if (Status == VehicleStatus.Decommissioned) //see if vehicle status is already decomminisioned
+        if (Status != VehicleStatus.Active && Status != VehicleStatus.InMaintenance) //can only be decommissioned if status is active or in maintenance
             throw new InvalidStateTransitionException(
-                "Vehicle is already decommissioned."); //throw exception
+                "Vehicle can only be decommissioned from Active or InMaintenance.");
 
         Status = VehicleStatus.Decommissioned;//else make the vehicle status as decommissioned
     }
