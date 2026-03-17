@@ -10,8 +10,6 @@ namespace TripService.Domain.Entities;
 public class Trip : AggregateRoot //trip is the root of the trip aggregate
 {
     //properties of trip
-    public Guid Id { get; private set; }
-
     public Guid? VehicleId { get; private set; }
 
     public Guid? DriverId { get; private set; }
@@ -35,7 +33,6 @@ public class Trip : AggregateRoot //trip is the root of the trip aggregate
 
     public Trip(Location startLocation, Location endLocation)//constructor
     {
-        Id = Guid.NewGuid();
         StartLocation = startLocation;
         EndLocation = endLocation;
         Status = TripStatus.Requested;
@@ -43,9 +40,12 @@ public class Trip : AggregateRoot //trip is the root of the trip aggregate
     
     //assign vehicle and driver to a trip
     //driver must be available
-    //vehicle must be active
+    //vehicle must be active (those in application layer not here)
     public void Assign(Guid vehicleId, Guid driverId)
     {
+        if (vehicleId == Guid.Empty || driverId == Guid.Empty)//validation
+            throw new DomainException("Invalid vehicle or driver.");
+        
         if (Status != TripStatus.Requested) //check that trip status is requested
             throw new InvalidStateTransitionException("Trip must be Requested to assign.");
 
@@ -69,6 +69,9 @@ public class Trip : AggregateRoot //trip is the root of the trip aggregate
     //when trip finishes
     public void Complete(decimal distanceKm)
     {
+        if (distanceKm <= 0)//input validation
+            throw new DomainException("Distance must be greater than 0");
+        
         if (Status != TripStatus.InProgress)//check that the trip status is in progress to be able to make it complete
             throw new InvalidStateTransitionException("Trip must be InProgress to complete.");
 
@@ -81,10 +84,18 @@ public class Trip : AggregateRoot //trip is the root of the trip aggregate
     //invoice after the trip completes
     public void Invoice(Money cost)
     {
+        if (cost == null)//validation
+            throw new DomainException("Cost cannot be null.");
+        
+        if (cost.Amount <= 0)//input validation
+            throw new DomainException("Cost must be positive");
+        
         if (Status != TripStatus.Completed) //check that the trip status is completed to be able to invoice
             throw new InvalidStateTransitionException("Trip must be Completed to invoice.");
 
         Cost = cost; //save the cost of the trip
         Status = TripStatus.Invoiced; //update the status of the trip to invoiced
     }
+    
+
 }
