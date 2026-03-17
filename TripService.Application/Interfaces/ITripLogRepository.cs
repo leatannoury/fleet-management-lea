@@ -9,5 +9,5 @@ using TripService.Domain.Entities;
 public interface ITripLogRepository
 {
     Task AddAsync(TripLog log); //add a trip log
-    Task<List<TripLog>> GetByTripIdAsync(Guid tripId); //get a trip log by id
+    Task<List<TripLog>> GetByTripIdAsync(Guid tripId); //get logs for a trip
 }

@@ -48,7 +48,7 @@ public class TripTrackingService
         if (trip == null) //check if null
             throw new DomainException("Trip not found");
         
-        var logs = await _logRepository.GetByTripIdAsync(tripId); //send to repository-get the triplog by id
+        var logs = await _logRepository.GetByTripIdAsync(tripId); //send to repository-get the logs for the trip
         
         if (logs == null || logs.Count < 2) //we need at least 2 pts to calculate distance
             return 0;
