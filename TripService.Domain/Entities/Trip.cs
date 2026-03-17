@@ -97,5 +97,9 @@ public class Trip : AggregateRoot //trip is the root of the trip aggregate
         Status = TripStatus.Invoiced; //update the status of the trip to invoiced
     }
     
-
+    //to update distance
+    public void SetDistance(decimal distanceKm)
+    {
+        DistanceKm = distanceKm;
+    }
 }

@@ -1,4 +1,4 @@
-﻿//service
+﻿//service for driver
 //implement use cases of the system
 //controller calls it
 //architecture: controller->application service->domain entity
