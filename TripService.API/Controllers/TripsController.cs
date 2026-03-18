@@ -62,11 +62,10 @@ public class TripsController : ControllerBase
 
     //complete trip
     [HttpPost("{id}/complete")]
-    public async Task<IActionResult> CompleteTrip(Guid id, CompleteTripRequest request)
+    public async Task<IActionResult> CompleteTrip(Guid id) 
     {
-        request.TripId = id;
-
-        await _tripService.CompleteTripAsync(request);//send to service
+        await _tripService.CompleteTripAsync(id);//send to service-complete trip method
         return Ok();
     }
+
 }

@@ -14,10 +14,13 @@ namespace TripService.Application.Services;
 public class TripService
 {
     private readonly ITripRepository _tripRepository;
+    private readonly TripTrackingService _tripTrackingService;
 
-    public TripService(ITripRepository tripRepository)//dependency injection
+
+    public TripService(ITripRepository tripRepository, TripTrackingService tripTrackingService)
     {
         _tripRepository = tripRepository;
+        _tripTrackingService = tripTrackingService;
     }
 
    //create a trip
@@ -85,16 +88,22 @@ public class TripService
     }
 
     //complete a trip
-    public async Task CompleteTripAsync(CompleteTripRequest request)
+    public async Task CompleteTripAsync(Guid tripId)
     {
-        var trip = await _tripRepository.GetByIdAsync(request.TripId);//send to repository-get the trip by id
+        var trip = await _tripRepository.GetByIdAsync(tripId);//send to repository-get the trip by id
 
         if (trip == null) //check if null
             throw new DomainException("Trip not found");
 
-        trip.Complete(request.DistanceKm);//complete the trip
-
-        await _tripRepository.UpdateAsync(trip);//send to repository to update trip
+        //calculate the distance of the trip based on the logs
+        var calculatedDistance = await _tripTrackingService.CalculateDistanceAsync(tripId);//calculate distance method in the trip tracking service
+        
+        if (calculatedDistance <= 0)//validation for calculated distance
+            throw new DomainException("Cannot complete a trip with 0 distance recorded.");
+        
+        trip.Complete(calculatedDistance);//complete trip
+        
+        await _tripRepository.UpdateAsync(trip);//send to repository-update the trip
     }
 
     //method to map to dto
