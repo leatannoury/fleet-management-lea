@@ -8,6 +8,7 @@ using FleetService.Application.Requests;
 using FleetService.Domain.Entities;
 using SharedKernel.ValueObjects;
 using FleetService.Application.Interfaces;
+using FleetService.Domain.Enums;
 
 namespace FleetService.Application.Services;
 
@@ -52,11 +53,15 @@ public class DriverService
     }
 
     //get all drivers
-    public async Task<List<DriverDto>> GetDrivers()
+    //support filtering based on driver status 
+    public async Task<List<DriverDto>> GetDrivers(DriverStatus? status = null)
     {
-        var drivers=await _repository.GetAllAsync();
+        var drivers = await _repository.GetAllAsync();//send to repository-get all drivers
         
-        //convert each entity to a dto 
+        if (status.HasValue) //apply filtering
+            drivers = drivers.Where(d => d.Status == status.Value).ToList();
+        
+        //return dto
         return drivers.Select(d => new DriverDto
         {
             Id = d.Id,

@@ -2,6 +2,7 @@
 
 using FleetService.Application.Requests;
 using FleetService.Application.Services;
+using FleetService.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FleetService.API.Controllers;
@@ -37,15 +38,12 @@ public class DriversController : ControllerBase
     
     //GET /api/drivers/{id}
     //get driver by id
+    //with filtering on driver status
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetDriver(Guid id)
+    public async Task<IActionResult> GetDrivers([FromQuery] DriverStatus? status)
     {
-        var driver = await _driverService.GetDriver(id);//send to service
-
-        if (driver == null)//check if null
-            return NotFound();
-
-        return Ok(driver);
+        var drivers = await _driverService.GetDrivers(status); //send to service
+        return Ok(drivers);
     }
     
     //PUT /api/drivers/{id}
