@@ -55,11 +55,19 @@ public class VehicleService
     
     
     //get all vehicles
-    public async Task<List<VehicleDto>> GetVehicles()
+    //with accept filters vehicle status and vehicle type
+    public async Task<List<VehicleDto>> GetVehicles(VehicleStatus? status = null, VehicleType? type = null)
     {
-        var vehicles = await _repository.GetAllAsync();//send to repository
+        var vehicles = await _repository.GetAllAsync(); //send to repository-get all vehicles
 
-        //convert to dto
+        //filter result
+        if (status.HasValue)
+            vehicles = vehicles.Where(v => v.Status == status.Value).ToList();
+        
+        if (type.HasValue)
+            vehicles = vehicles.Where(v => v.Type == type.Value).ToList();
+
+        //return dto 
         return vehicles.Select(v => new VehicleDto
         {
             Id = v.Id,
@@ -72,6 +80,7 @@ public class VehicleService
             DriverId = v.DriverId
         }).ToList();
     }
+
     
     //get vehicle by id
     public async Task<VehicleDto?> GetVehicle(Guid id)

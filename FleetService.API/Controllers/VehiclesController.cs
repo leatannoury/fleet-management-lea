@@ -2,6 +2,7 @@
 
 using FleetService.Application.Requests;
 using FleetService.Application.Services;
+using FleetService.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FleetService.API.Controllers;
@@ -28,12 +29,14 @@ public class VehiclesController : ControllerBase
 
     // GET /api/vehicles
     //get all vehicles
+    //with accepting filters for vehicle status and vehicle type
     [HttpGet]
-    public async Task<IActionResult> GetVehicles()
+    public async Task<IActionResult> GetVehicles([FromQuery] VehicleStatus? status, [FromQuery] VehicleType? type)
     {
-        var vehicles = await _vehicleService.GetVehicles();//send to service
+        var vehicles = await _vehicleService.GetVehicles(status, type); //send to service
         return Ok(vehicles);
     }
+
     
     //GET /api/vehicles/{id}
     //get vehicle by id
