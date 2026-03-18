@@ -8,6 +8,7 @@ using TripService.Application.Interfaces;
 using TripService.Application.Requests;
 using TripService.Domain.Entities;
 using SharedKernel.ValueObjects;
+using TripService.Domain.Enums;
 
 namespace TripService.Application.Services;
 
@@ -42,11 +43,24 @@ public class TripService
     }
     
     //get all trips
-    public async Task<List<TripDto>> GetAllTripsAsync()
+    //with filtering by driver, vehicle, date range, status
+    public async Task<List<TripDto>> GetAllTripsAsync(Guid? driverId = null, Guid? vehicleId = null, TripStatus? status = null, DateTime? startDate = null, DateTime? endDate = null)
     {
-        var trips = await _tripRepository.GetAllAsync();
-
-        return trips.Select(MapToDto).ToList();
+        var trips = await _tripRepository.GetAllAsync();//send to repository-get all trips
+        
+        //check what filters we have from request and apply the filters
+        if (driverId.HasValue)
+            trips = trips.Where(t => t.DriverId == driverId.Value).ToList();
+        if (vehicleId.HasValue)
+            trips = trips.Where(t => t.VehicleId == vehicleId.Value).ToList();
+        if (status.HasValue)
+            trips = trips.Where(t => t.Status == status.Value).ToList();
+        if (startDate.HasValue)
+            trips = trips.Where(t => t.StartTime >= startDate.Value).ToList();
+        if (endDate.HasValue)
+            trips = trips.Where(t => t.EndTime <= endDate.Value).ToList();
+        
+        return trips.Select(MapToDto).ToList(); //return dto list
     }
     
     //get trip by id

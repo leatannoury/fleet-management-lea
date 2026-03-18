@@ -4,6 +4,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TripService.Application.Requests;
 using TripService.Application.Services;
+using TripService.Domain.Enums;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -25,10 +26,12 @@ public class TripsController : ControllerBase
     }
     
     //get all trips
+    //with filtering by driver, vehicle, date range, status
     [HttpGet]
-    public async Task<IActionResult> GetAllTrips()
+    public async Task<IActionResult> GetAllTrips([FromQuery] Guid? driverId, [FromQuery] Guid? vehicleId, [FromQuery] TripStatus? status, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
-        var trips = await _tripService.GetAllTripsAsync();
+        var trips = await _tripService.GetAllTripsAsync(driverId, vehicleId, status, startDate, endDate); //send to trip service
+        
         return Ok(trips);
     }
 
