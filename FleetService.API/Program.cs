@@ -3,6 +3,7 @@ using FleetService.Application.Services;
 using FleetService.Infrastructure.Persistence;
 using FleetService.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
+using SharedKernel.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,9 @@ builder.Services.AddScoped<DriverService>();
 
 
 var app = builder.Build();
+
+app.UseMiddleware<GlobalExceptionMiddleware>(); //register global exception middleware
+
 
 
 // Configure the HTTP request pipeline.

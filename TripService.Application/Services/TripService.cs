@@ -37,6 +37,25 @@ public class TripService
         //return dto
         return MapToDto(trip);
     }
+    
+    //get all trips
+    public async Task<List<TripDto>> GetAllTripsAsync()
+    {
+        var trips = await _tripRepository.GetAllAsync();
+
+        return trips.Select(MapToDto).ToList();
+    }
+    
+    //get trip by id
+    public async Task<TripDto?> GetTripByIdAsync(Guid id)
+    {
+        var trip = await _tripRepository.GetByIdAsync(id);
+
+        if (trip == null)//check if null
+            return null;
+
+        return MapToDto(trip);//return dto
+    }
 
    //assign a trip
     public async Task AssignTripAsync(Guid tripId, AssignTripRequest request)

@@ -27,6 +27,12 @@ public class TripRepository : ITripRepository
         await _context.Trips.AddAsync(trip);
         await _context.SaveChangesAsync();
     }
+    
+    //get all trips
+    public async Task<List<Trip>> GetAllAsync()
+    {
+        return await _context.Trips.ToListAsync();
+    }
 
     //get trip by id
     public async Task<Trip?> GetByIdAsync(Guid id)
