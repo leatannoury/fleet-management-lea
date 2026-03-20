@@ -120,6 +120,24 @@ public class TripService
         await _tripRepository.UpdateAsync(trip);//send to repository-update the trip
     }
 
+    //method invoice a trip
+    public async Task InvoiceTripAsync(Guid tripId, decimal amount, string currency)
+    {
+        var trip = await _tripRepository.GetByIdAsync(tripId);//send to repository- to get trip by id
+
+        if (trip == null)//check if null
+            throw new DomainException("Trip not found");
+
+        //money object
+        var cost = new Money(amount, currency);
+
+        //invoice method in the trip entity
+        trip.Invoice(cost);
+
+        await _tripRepository.UpdateAsync(trip); //send to repository-update trip
+    }
+
+    
     //method to map to dto
     private TripDto MapToDto(Trip trip)
     {

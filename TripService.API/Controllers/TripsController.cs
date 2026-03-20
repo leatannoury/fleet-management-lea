@@ -71,4 +71,14 @@ public class TripsController : ControllerBase
         return Ok();
     }
 
+    //to invoice trip after completion
+    [HttpPost("{id}/invoice")]
+    public async Task<IActionResult> InvoiceTrip(Guid id, [FromBody] InvoiceTripRequest request)
+    {
+        await _tripService.InvoiceTripAsync(id, request.Amount, request.Currency);//send to trip service to invoice trip method
+        return Ok();
+    }
+
+
+
 }
