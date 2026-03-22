@@ -51,6 +51,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         // This event interceptor captures the token, read the json dictionary, and maps them manually into standard .NET Claims.
         options.Events = new JwtBearerEvents
         {
+            // by default, standard JWT authentication relies on passing authorization: 
+            // bearer <token> in the http headers. 
+            // but standard WebSockets which SignalR uses do not support http headers 
+            // natively in typical browser apps. 
+            // to fix this, we allow the token to be passed in the URL 
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                //if the request is pointing to our signal r hub, then extract the token from the url
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/trip-tracking"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            },
+
             OnTokenValidated = context =>
             {
                 if (context.Principal?.Identity is System.Security.Claims.ClaimsIdentity identity)
@@ -74,6 +91,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+builder.Services.AddSignalR();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -131,5 +149,6 @@ app.UseHttpsRedirection();
 app.UseAuthentication(); 
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<TripService.API.Hubs.TripTrackingHub>("/hubs/trip-tracking");//map the hub
 
 app.Run();
