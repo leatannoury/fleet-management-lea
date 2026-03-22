@@ -1,9 +1,10 @@
-﻿//controller receive request then calls vehicleService ->service creates entity->vehicle repository saves to db
+//controller receive request then calls vehicleService ->service creates entity->vehicle repository saves to db
 
 using FleetService.Application.Requests;
 using FleetService.Application.Services;
 using FleetService.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FleetService.API.Controllers;
 
@@ -20,6 +21,7 @@ public class DriversController : ControllerBase
 
     // POST /api/drivers
     //create a driver
+    [Authorize(Roles = "Admin, FleetManager")]
     [HttpPost]
     public async Task<IActionResult> CreateDriver(CreateDriverRequest request)
     {
@@ -29,6 +31,7 @@ public class DriversController : ControllerBase
 
     // GET /api/drivers
     //get all drivers
+    [Authorize(Roles = "Admin, FleetManager, Dispatcher")] // Dispatchers need read-only access
     [HttpGet]
     public async Task<IActionResult> GetDrivers()
     {
@@ -39,6 +42,7 @@ public class DriversController : ControllerBase
     //GET /api/drivers/{id}
     //get driver by id
     //with filtering on driver status
+    [Authorize(Roles = "Admin, FleetManager, Dispatcher")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetDrivers([FromQuery] DriverStatus? status)
     {
@@ -48,6 +52,7 @@ public class DriversController : ControllerBase
     
     //PUT /api/drivers/{id}
     //update driver
+    [Authorize(Roles = "Admin, FleetManager")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateDriver(Guid id, UpdateDriverRequest request)
     {
@@ -61,6 +66,7 @@ public class DriversController : ControllerBase
     
     //DELETE /api/drivers/{id}
     //delete driver
+    [Authorize(Roles = "Admin, FleetManager")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteDriver(Guid id)
     {

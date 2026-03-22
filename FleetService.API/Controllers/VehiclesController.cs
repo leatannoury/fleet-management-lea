@@ -1,9 +1,10 @@
-﻿//controller receive request then calls vehicleService ->service creates entity->vehicle repository saves to db
+//controller receive request then calls vehicleService ->service creates entity->vehicle repository saves to db
 
 using FleetService.Application.Requests;
 using FleetService.Application.Services;
 using FleetService.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FleetService.API.Controllers;
 
@@ -20,6 +21,7 @@ public class VehiclesController : ControllerBase
 
     // POST /api/vehicles
     //create/add a vehicle
+    [Authorize(Roles = "Admin, FleetManager")]
     [HttpPost]
     public async Task<IActionResult> CreateVehicle(CreateVehicleRequest request)
     {
@@ -30,6 +32,7 @@ public class VehiclesController : ControllerBase
     // GET /api/vehicles
     //get all vehicles
     //with accepting filters for vehicle status and vehicle type
+    [Authorize(Roles = "Admin, FleetManager, Dispatcher")] // Dispatchers need read-only access
     [HttpGet]
     public async Task<IActionResult> GetVehicles([FromQuery] VehicleStatus? status, [FromQuery] VehicleType? type)
     {
@@ -40,6 +43,7 @@ public class VehiclesController : ControllerBase
     
     //GET /api/vehicles/{id}
     //get vehicle by id
+    [Authorize(Roles = "Admin, FleetManager, Dispatcher")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetVehicle(Guid id)
     {
@@ -53,6 +57,7 @@ public class VehiclesController : ControllerBase
     
     //PUT /api/vehicles/{id}
     //update a vehicle
+    [Authorize(Roles = "Admin, FleetManager")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateVehicle(Guid id, UpdateVehicleRequest request)
     {
@@ -66,6 +71,7 @@ public class VehiclesController : ControllerBase
     
     //DELETE /api/vehicles/{id}
     //delete a vehicle
+    [Authorize(Roles = "Admin, FleetManager")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteVehicle(Guid id)
     {
@@ -78,6 +84,7 @@ public class VehiclesController : ControllerBase
     }
     
     //assign driver to vehicle
+    [Authorize(Roles = "Admin, FleetManager")]
     [HttpPost("{id}/assign-driver")]
     public async Task<IActionResult> AssignDriver(Guid id, AssignDriverRequest request)
     {
@@ -90,6 +97,7 @@ public class VehiclesController : ControllerBase
     }
     
     //unassign driver from vehilce
+    [Authorize(Roles = "Admin, FleetManager")]
     [HttpPost("{id}/unassign-driver")]
     public async Task<IActionResult> UnassignDriver(Guid id)
     {
@@ -104,6 +112,7 @@ public class VehiclesController : ControllerBase
     }
     
     //change vehicle status
+    [Authorize(Roles = "Admin, FleetManager")]
     [HttpPost("{id}/change-status")]
     public async Task<IActionResult> ChangeStatus(Guid id, ChangeVehicleStatusRequest request)
     {

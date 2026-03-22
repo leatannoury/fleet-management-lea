@@ -1,10 +1,11 @@
-﻿//controller receive request then calls trip Service ->service ->trip repository saves to db
+//controller receive request then calls trip Service ->service ->trip repository saves to db
 
 
 using Microsoft.AspNetCore.Mvc;
 using TripService.Application.Requests;
 using TripService.Application.Services;
 using TripService.Domain.Enums;
+using Microsoft.AspNetCore.Authorization;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -18,6 +19,7 @@ public class TripsController : ControllerBase
     }
 
     //create a trip
+    [Authorize(Roles = "Admin, Dispatcher")] // Dispatchers and Admins can create and assign trips
     [HttpPost]
     public async Task<IActionResult> CreateTrip(CreateTripRequest request)
     {
@@ -27,6 +29,7 @@ public class TripsController : ControllerBase
     
     //get all trips
     //with filtering by driver, vehicle, date range, status
+    [Authorize(Roles = "Admin, Dispatcher, Driver")] // Drivers can view trips (to see their own)
     [HttpGet]
     public async Task<IActionResult> GetAllTrips([FromQuery] Guid? driverId, [FromQuery] Guid? vehicleId, [FromQuery] TripStatus? status, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
@@ -36,6 +39,7 @@ public class TripsController : ControllerBase
     }
 
     //get trip by id
+    [Authorize(Roles = "Admin, Dispatcher, Driver")]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetTrip(Guid id)
     {
@@ -48,6 +52,7 @@ public class TripsController : ControllerBase
     }
     
     //assign trip
+    [Authorize(Roles = "Admin, Dispatcher")]
     [HttpPost("{id}/assign")]
     public async Task<IActionResult> AssignTrip(Guid id, AssignTripRequest request)
     {
@@ -56,6 +61,7 @@ public class TripsController : ControllerBase
     }
 
     //start trip
+    [Authorize(Roles = "Admin, Dispatcher")]
     [HttpPost("{id}/start")]
     public async Task<IActionResult> StartTrip(Guid id)
     {
@@ -64,6 +70,7 @@ public class TripsController : ControllerBase
     }
 
     //complete trip
+    [Authorize(Roles = "Admin, Dispatcher")]
     [HttpPost("{id}/complete")]
     public async Task<IActionResult> CompleteTrip(Guid id) 
     {
@@ -72,6 +79,7 @@ public class TripsController : ControllerBase
     }
 
     //to invoice trip after completion
+    [Authorize(Roles = "Admin, Dispatcher")]
     [HttpPost("{id}/invoice")]
     public async Task<IActionResult> InvoiceTrip(Guid id, [FromBody] InvoiceTripRequest request)
     {

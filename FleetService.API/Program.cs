@@ -8,15 +8,87 @@ using Microsoft.EntityFrameworkCore;
 using SharedKernel.Middleware;
 using TripService.Application.Interfaces;
 using SharedKernel.Messaging;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
+//keycloak jwt authentication setup
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        // tell the api where keycloak lives and which realm to work
+        options.Authority = "http://localhost:8080/realms/fleet-platform";
+        
+        //disable https requirement (we are now localhost for development
+        options.RequireHttpsMetadata = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateAudience = false, // Keycloak doesn't always include the audience, so we disable it for dev
+            ValidateIssuer = true,
+            ValidIssuer = "http://localhost:8080/realms/fleet-platform",
+        };
+
+        // Keycloak nests roles inside a complex 'realm_access' JSON object. ASP.NET cannot read this natively.
+        // This event interceptor captures the token, read the json dictionary, and maps them manually into standard .NET Claims.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                if (context.Principal?.Identity is System.Security.Claims.ClaimsIdentity identity)
+                {
+                    var realmAccessClaim = identity.FindFirst("realm_access");
+                    if (realmAccessClaim != null)
+                    {
+                        var realmAccessAsDict = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, string[]>>(realmAccessClaim.Value);
+                        if (realmAccessAsDict != null && realmAccessAsDict.TryGetValue("roles", out var roles))
+                        {
+                            foreach (var role in roles)
+                            {
+                                identity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, role));
+                            }
+                        }
+                    }
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+builder.Services.AddAuthorization();
+
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Enter 'Bearer {your token}'"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
 
 builder.Services.AddDbContext<FleetDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("FleetDb")));//configure fleet dbcontext
@@ -51,8 +123,9 @@ if (app.Environment.IsDevelopment())
 }
 
 
-app.UseHttpsRedirection();
-
+app.UseAuthentication(); 
+app.UseAuthorization();
 app.MapControllers();
+
 
 app.Run();
