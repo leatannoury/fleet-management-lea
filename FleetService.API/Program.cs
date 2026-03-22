@@ -1,9 +1,13 @@
 using FleetService.Application.Interfaces;
 using FleetService.Application.Services;
+using FleetService.Infrastructure.Messaging;
+using FleetService.Infrastructure.Messaging.Consumers;
 using FleetService.Infrastructure.Persistence;
 using FleetService.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel.Middleware;
+using TripService.Application.Interfaces;
+using SharedKernel.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +28,13 @@ builder.Services.AddScoped<IDriverRepository, DriverRepository>();
 //register services
 builder.Services.AddScoped<VehicleService>();
 builder.Services.AddScoped<DriverService>();
+
+//register rabbitmq event publisher
+builder.Services.AddSingleton<IEventPublisher, RabbitMqPublisher>();
+
+//register consumer
+builder.Services.AddHostedService<TripCompletedConsumer>();
+builder.Services.AddHostedService<TripStartedConsumer>();
 
 
 var app = builder.Build();

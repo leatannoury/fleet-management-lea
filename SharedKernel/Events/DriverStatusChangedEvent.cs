@@ -1,4 +1,6 @@
-﻿namespace SharedKernel.Events;
+﻿//message sent when driver becomes available or on a trip 
+
+namespace SharedKernel.Events;
 
 public class DriverStatusChangedEvent
 {

@@ -13,13 +13,14 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="RabbitMQ.Client" Version="7.2.1" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FleetService.Application\FleetService.Application.csproj" />
     <ProjectReference Include="..\FleetService.Infrastructure\FleetService.Infrastructure.csproj" />
+    <ProjectReference Include="..\TripService.Application\TripService.Application.csproj" />
   </ItemGroup>
 
 </Project>

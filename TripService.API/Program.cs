@@ -4,6 +4,8 @@ using TripService.Infrastructure.Persistence;
 using TripService.Infrastructure.Repositories;
 using TripService.Application.Interfaces;
 using TripService.Application.Services;
+using TripService.Infrastructure.Messaging.Consumers;
+using SharedKernel.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,11 +23,24 @@ builder.Services.AddScoped<ITripLogRepository, TripLogRepository>();
 builder.Services.AddScoped<TripService.Application.Services.TripService>();
 builder.Services.AddScoped<TripTrackingService>();
 
+//register consumer
+builder.Services.AddHostedService<DriverAssignedConsumer>();
+builder.Services.AddHostedService<DriverUnassignedConsumer>();
+builder.Services.AddHostedService<DriverStatusChangedConsumer>();
+builder.Services.AddHostedService<VehicleStatusChangedConsumer>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+//publish messages
+builder.Services.AddSingleton<IEventPublisher, RabbitMqPublisher>();
+
+
+builder.Services.AddMemoryCache();//register memory cache
+
+
 
 var app = builder.Build();
 

@@ -1,4 +1,4 @@
-﻿//service
+//service
 //implement use cases of the system
 //controller calls it
 //architecture: controller->application service->domain entity
@@ -10,6 +10,8 @@ using FleetService.Domain.Enums;
 using FleetService.Application.Interfaces;
 using SharedKernel.Exceptions;
 using SharedKernel.ValueObjects;
+using SharedKernel.Messaging;
+using SharedKernel.Events;
 
 
 namespace FleetService.Application.Services;
@@ -18,11 +20,13 @@ public class VehicleService
 {
     private readonly IVehicleRepository _repository;
     private readonly IDriverRepository _driverRepository;
+    private readonly IEventPublisher _publisher;
 
-    public VehicleService(IVehicleRepository repository, IDriverRepository driverRepository)//constructor-dependency injection
+    public VehicleService(IVehicleRepository repository, IDriverRepository driverRepository, IEventPublisher publisher)//constructor-dependency injection
     {
         _repository = repository;
         _driverRepository = driverRepository;
+        _publisher = publisher;
     }
 
     //create vehicle
@@ -159,6 +163,15 @@ public class VehicleService
         await _repository.UpdateAsync(vehicle);//send to repository-update vehivle details
         await _driverRepository.UpdateAsync(driver);//send to repository-update driver details
 
+        //fleet publishes that the driver is assigned
+        //Fleet publishes "driver.assigned"  
+        //Trip updates cache: DriverStatus = Assigned
+        _publisher.Publish("driver.assigned", new DriverAssignedEvent {
+            DriverId = driver.Id,
+            VehicleId = vehicle.Id
+        });
+
+
         return true;
     }
     
@@ -184,6 +197,14 @@ public class VehicleService
 
         if (driver != null)
             await _driverRepository.UpdateAsync(driver);//send to repository-update driver
+
+
+        //fleet publishes that the driver is unassigned
+        _publisher.Publish("driver.unassigned", new DriverUnassignedEvent {
+            VehicleId = vehicleId,
+            DriverId = driver?.Id ?? Guid.Empty 
+        });
+
 
         return true;
     }
@@ -227,7 +248,30 @@ public class VehicleService
                 throw new Exception("Invalid status transition"); //unexpected cases
         }
 
+        //the fleet publishes that the vehicle status changed
+        //Fleet publishes "vehicle.status.changed"
+        //Trip updates cache: VehicleStatus = Active
+        _publisher.Publish("vehicle.status.changed", new VehicleStatusChangedEvent {
+            VehicleId = vehicleId,
+            Status = status.ToString()
+        });
+
+
+
         await _repository.UpdateAsync(vehicle);//send to repository-update vehicle
+    }
+    
+    //update mileage
+    public async Task UpdateMileage(Guid vehicleId, decimal distanceKm)
+    {
+        var vehicle = await _repository.GetByIdAsync(vehicleId);
+
+        if (vehicle == null)
+            throw new Exception("Vehicle not found");
+
+        vehicle.UpdateMileage(distanceKm);
+
+        await _repository.UpdateAsync(vehicle);
     }
     
 }

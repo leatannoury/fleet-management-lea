@@ -1,4 +1,6 @@
-﻿namespace SharedKernel.Events;
+﻿//message sent when a trip starts
+
+namespace SharedKernel.Events;
 
 public class TripStartedEvent
 {

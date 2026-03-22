@@ -1,4 +1,4 @@
-﻿//service for driver
+//service for driver
 //implement use cases of the system
 //controller calls it
 //architecture: controller->application service->domain entity
@@ -9,6 +9,8 @@ using FleetService.Domain.Entities;
 using SharedKernel.ValueObjects;
 using FleetService.Application.Interfaces;
 using FleetService.Domain.Enums;
+using SharedKernel.Messaging;
+using SharedKernel.Events;
 
 namespace FleetService.Application.Services;
 
@@ -17,10 +19,12 @@ public class DriverService
 
 
     private readonly IDriverRepository _repository;
+    private readonly IEventPublisher _publisher;
 
-    public DriverService(IDriverRepository repository)//dependency injection
+    public DriverService(IDriverRepository repository, IEventPublisher publisher)
     {
         _repository = repository;
+        _publisher = publisher;
     }
 
     
@@ -130,4 +134,36 @@ public class DriverService
 
         return true;
     }
+
+
+        public async Task MarkDriverAvailable(Guid driverId)
+    {
+        var driver = await _repository.GetByIdAsync(driverId);
+        if (driver == null) return;
+
+        driver.MarkAvailable(); // logic in domain changes status to available
+        await _repository.UpdateAsync(driver);
+
+        //fleet publishes that driver status changed
+        _publisher.Publish("driver.status.changed", new DriverStatusChangedEvent {
+            DriverId = driver.Id,
+            Status = "Available"
+        });
+    }
+
+    public async Task MarkDriverOnTrip(Guid driverId)
+    {
+        var driver = await _repository.GetByIdAsync(driverId);
+        if (driver == null) return;
+
+        driver.MarkOnTrip(); // logic in domain changes status to on trip
+        await _repository.UpdateAsync(driver);
+
+        //fleet publishes that driver status changed
+        _publisher.Publish("driver.status.changed", new DriverStatusChangedEvent {
+            DriverId = driver.Id,
+            Status = "OnTrip"
+        });
+    }
+
 }

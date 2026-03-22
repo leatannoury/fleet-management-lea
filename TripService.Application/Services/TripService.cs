@@ -2,6 +2,7 @@
 //implement use cases of the system
 //controller calls it
 
+using SharedKernel.Events;
 using SharedKernel.Exceptions;
 using TripService.Application.DTOs;
 using TripService.Application.Interfaces;
@@ -9,6 +10,8 @@ using TripService.Application.Requests;
 using TripService.Domain.Entities;
 using SharedKernel.ValueObjects;
 using TripService.Domain.Enums;
+using SharedKernel.Messaging;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace TripService.Application.Services;
 
@@ -16,12 +19,15 @@ public class TripService
 {
     private readonly ITripRepository _tripRepository;
     private readonly TripTrackingService _tripTrackingService;
+    private readonly IEventPublisher _publisher;
+    private readonly IMemoryCache _cache;
 
-
-    public TripService(ITripRepository tripRepository, TripTrackingService tripTrackingService)
+    public TripService(ITripRepository tripRepository, TripTrackingService tripTrackingService, IEventPublisher publisher, IMemoryCache cache)
     {
         _tripRepository = tripRepository;
         _tripTrackingService = tripTrackingService;
+        _publisher = publisher;
+        _cache = cache;
     }
 
    //create a trip
@@ -82,13 +88,28 @@ public class TripService
         if (trip == null) //check if null
             throw new DomainException("Trip not found");
 
-        //assign vehicle and driver to trip
+        // Check local cache FIRST before assigning
+        // If cache has no entry, driver is considered available (cache is populated when Fleet publishes events)
+        // Cache check: Driver available? Vehicle active?
+        var driverCacheStatus = _cache.Get<string>($"DriverStatus_{request.DriverId}");
+        if (driverCacheStatus == "OnTrip")
+            throw new DomainException("Driver is currently on another trip.");
+
+        var vehicleCacheStatus = _cache.Get<string>($"VehicleStatus_{request.VehicleId}");
+        if (vehicleCacheStatus == "Inactive" || vehicleCacheStatus == "InMaintenance" || vehicleCacheStatus == "Decommissioned")
+            throw new DomainException("Vehicle is not available.");
+
+        //assign vehicle and driver to trip (domain entity validates state transition)
         trip.Assign(request.VehicleId, request.DriverId);
 
         await _tripRepository.UpdateAsync(trip); //send to repository to update trip
     }
 
     //start a trip
+    //flow:
+    //Trip Service calls StartTripAsync() → publishes "trip.started"
+    //TripStartedConsumer receives it
+    //Calls driverService.MarkDriverOnTrip() → sets Driver status to OnTrip in Fleet DB
     public async Task StartTripAsync(Guid tripId)
     {
         var trip = await _tripRepository.GetByIdAsync(tripId);//send to repository-get the trip by id
@@ -97,11 +118,30 @@ public class TripService
             throw new DomainException("Trip not found");
 
         trip.Start(); //start trip
+        
+        //trip publishes that trip started
+        //Trip publishes "trip.started"
+        //Fleet receives → DriverService.MarkDriverOnTrip()
+        //Fleet publishes "driver.status.changed" (OnTrip)
+        //Trip cache updates: DriverStatus = OnTrip
+        _publisher.Publish("trip.started", new TripStartedEvent
+        {
+            TripId = trip.Id,
+            VehicleId = (Guid)trip.VehicleId,
+            DriverId = (Guid)trip.DriverId
+        });
 
         await _tripRepository.UpdateAsync(trip);//send to repository to update trip
     }
 
     //complete a trip
+    //flow:
+//Trip Service calls Complete Trip method → saves to Trip DB → publishes "trip.completed" to RabbitMQ
+// RabbitMQ holds the message in the "trip.completed" queue
+// Fleet Service's TripCompletedConsumer (running in background) receives the message almost instantly
+// It creates a DI scope, fetches VehicleService and DriverService
+// Calls vehicleService.UpdateMileage() → updates Vehicle DB
+// Calls driverService.MarkDriverAvailable() → updates Driver status in DB → publishes DriverStatusChanged event
     public async Task CompleteTripAsync(Guid tripId)
     {
         var trip = await _tripRepository.GetByIdAsync(tripId);//send to repository-get the trip by id
@@ -116,6 +156,15 @@ public class TripService
             throw new DomainException("Cannot complete a trip with 0 distance recorded.");
         
         trip.Complete(calculatedDistance);//complete trip
+        
+        //trip publishes that trip completed
+        _publisher.Publish("trip.completed", new TripCompletedEvent
+        {
+            TripId = trip.Id,
+            VehicleId = (Guid)trip.VehicleId,
+            DriverId = (Guid)trip.DriverId,
+            DistanceKm = trip.DistanceKm ?? 0
+        });
         
         await _tripRepository.UpdateAsync(trip);//send to repository-update the trip
     }

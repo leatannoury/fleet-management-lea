@@ -1,4 +1,6 @@
-﻿namespace SharedKernel.Events;
+﻿//message sent when fleet assigns a driver
+
+namespace SharedKernel.Events;
 
 public class DriverAssignedEvent
 {
