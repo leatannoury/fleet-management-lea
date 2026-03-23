@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using SharedKernel.Events;
 using FleetService.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace FleetService.Infrastructure.Messaging.Consumers;
 
@@ -17,10 +18,12 @@ public class TripStartedConsumer : BackgroundService
 //from the the api boots up
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<TripStartedConsumer> _logger;
 
-    public TripStartedConsumer(IServiceProvider serviceProvider)
+    public TripStartedConsumer(IServiceProvider serviceProvider, ILogger<TripStartedConsumer> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -38,12 +41,19 @@ public class TripStartedConsumer : BackgroundService
             var json = Encoding.UTF8.GetString(ea.Body.ToArray());
             var message = JsonSerializer.Deserialize<TripStartedEvent>(json);
 
-                //create scope
+            //log that consumer received the event
+            _logger.LogInformation("[CONSUMER] trip.started received — TripId: {TripId}, DriverId: {DriverId}",
+                message?.TripId, message?.DriverId);
+
+            //create scope
             using var scope = _serviceProvider.CreateScope();
             //fetch the services
             var driverService = scope.ServiceProvider.GetRequiredService<DriverService>();
             //update entities
             await driverService.MarkDriverOnTrip(message.DriverId);
+
+            //log that consumer processed trip started
+            _logger.LogInformation("[CONSUMER] trip.started processed — Driver {DriverId} marked as OnTrip", message?.DriverId);
         };
 
         //fleet consumes tripstarted

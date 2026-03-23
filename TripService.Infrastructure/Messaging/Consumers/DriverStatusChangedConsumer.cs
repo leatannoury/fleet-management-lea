@@ -16,17 +16,20 @@ using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using SharedKernel.Events;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Caching.Memory; 
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace TripService.Infrastructure.Messaging.Consumers;
 
 public class DriverStatusChangedConsumer : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<DriverStatusChangedConsumer> _logger;
 
-    public DriverStatusChangedConsumer(IServiceProvider serviceProvider)
+    public DriverStatusChangedConsumer(IServiceProvider serviceProvider, ILogger<DriverStatusChangedConsumer> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -44,6 +47,10 @@ public class DriverStatusChangedConsumer : BackgroundService
             var json = Encoding.UTF8.GetString(ea.Body.ToArray());
             var message = JsonSerializer.Deserialize<DriverStatusChangedEvent>(json);
 
+            //log that consumer received the event
+            _logger.LogInformation("[CONSUMER] driver.status.changed received — DriverId: {DriverId}, Status: {Status}",
+                message?.DriverId, message?.Status);
+
             using var scope = _serviceProvider.CreateScope();
             var cache = scope.ServiceProvider.GetRequiredService<IMemoryCache>();
 
@@ -51,7 +58,6 @@ public class DriverStatusChangedConsumer : BackgroundService
         };
 
         channel.BasicConsume("driver.status.changed", true, consumer);
-
         return Task.CompletedTask;
     }
 }

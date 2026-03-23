@@ -11,37 +11,42 @@ using FleetService.Application.Interfaces;
 using FleetService.Domain.Enums;
 using SharedKernel.Messaging;
 using SharedKernel.Events;
+using Microsoft.Extensions.Logging;
 
 namespace FleetService.Application.Services;
 
 public class DriverService
 {
-
-
     private readonly IDriverRepository _repository;
     private readonly IEventPublisher _publisher;
+    private readonly ILogger<DriverService> _logger;
 
-    public DriverService(IDriverRepository repository, IEventPublisher publisher)
+    public DriverService(IDriverRepository repository, IEventPublisher publisher, ILogger<DriverService> logger)
     {
         _repository = repository;
         _publisher = publisher;
+        _logger = logger;
     }
 
     
     //create driver
     public async Task<DriverDto> CreateDriver(CreateDriverRequest request)
     {
-        //controller receives json, it becomes CreateVehicleRequest, the service convert it to a domain entity, and return a dto
+         //log action we are doing
+        _logger.LogInformation("Creating driver with license {LicenseNumber}", request.LicenseNumber);
 
         //convert input to a domain entity
         var driver = new Driver(
             request.FirstName,
             request.LastName,
-            new LicenseNumber(request.LicenseNumber), //create value object 
+            new LicenseNumber(request.LicenseNumber),
             request.LicenseExpiry
         );
 
-        await _repository.AddAsync(driver); //save entity to repository
+        await _repository.AddAsync(driver);
+
+        //log that a driver is created
+        _logger.LogInformation("Driver {DriverId} ({FirstName} {LastName}) created successfully", driver.Id, driver.FirstName, driver.LastName);
 
         //convert to dto and return response
         return new DriverDto
@@ -103,12 +108,19 @@ public class DriverService
     {
         var driver = await _repository.GetByIdAsync(id);//send to repository-find the driver we want to update
 
-        if (driver == null)//check if null
+        if (driver == null) //check if null
+        {
+            //log warning if couldnt update
+            _logger.LogWarning("UpdateDriver: Driver {DriverId} not found", id);
             return null;
+        }
 
         driver.UpdateDetails(request.FirstName, request.LastName, request.LicenseExpiry);//domain entities control their own state changes-we dont update directly from service
 
         await _repository.UpdateAsync(driver);//send to repository-update
+
+        //log that driver was updated
+        _logger.LogInformation("Driver {DriverId} updated successfully", driver.Id);
 
         return new DriverDto
         {
@@ -128,21 +140,29 @@ public class DriverService
         var driver = await _repository.GetByIdAsync(id);//send to repository-find the driver we want to delete
 
         if (driver == null)//check if null
+        {
+            //log warning if couldn't delete
+            _logger.LogWarning("DeleteDriver: Driver {DriverId} not found", id);
             return false;
+        }
 
-        await _repository.DeleteAsync(driver);//send to repository-delete
+        await _repository.DeleteAsync(driver);//send to repository-delete driver
+       //log that driver deleted
+        _logger.LogInformation("Driver {DriverId} deleted", id);
 
         return true;
     }
 
 
-        public async Task MarkDriverAvailable(Guid driverId)
+    public async Task MarkDriverAvailable(Guid driverId)
     {
         var driver = await _repository.GetByIdAsync(driverId);
         if (driver == null) return;
 
         driver.MarkAvailable(); // logic in domain changes status to available
         await _repository.UpdateAsync(driver);
+        //log that driver is available
+        _logger.LogInformation("Driver {DriverId} marked as Available", driverId);
 
         //fleet publishes that driver status changed
         _publisher.Publish("driver.status.changed", new DriverStatusChangedEvent {
@@ -158,6 +178,8 @@ public class DriverService
 
         driver.MarkOnTrip(); // logic in domain changes status to on trip
         await _repository.UpdateAsync(driver);
+        //log that driver is marked on trip
+        _logger.LogInformation("Driver {DriverId} marked as OnTrip", driverId);
 
         //fleet publishes that driver status changed
         _publisher.Publish("driver.status.changed", new DriverStatusChangedEvent {

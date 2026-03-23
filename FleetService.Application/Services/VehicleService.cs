@@ -12,6 +12,8 @@ using SharedKernel.Exceptions;
 using SharedKernel.ValueObjects;
 using SharedKernel.Messaging;
 using SharedKernel.Events;
+using Microsoft.Extensions.Logging;
+
 
 
 namespace FleetService.Application.Services;
@@ -21,17 +23,23 @@ public class VehicleService
     private readonly IVehicleRepository _repository;
     private readonly IDriverRepository _driverRepository;
     private readonly IEventPublisher _publisher;
+    private readonly ILogger<VehicleService> _logger;
 
-    public VehicleService(IVehicleRepository repository, IDriverRepository driverRepository, IEventPublisher publisher)//constructor-dependency injection
+    public VehicleService(IVehicleRepository repository, IDriverRepository driverRepository, IEventPublisher publisher, ILogger<VehicleService> logger)
     {
         _repository = repository;
         _driverRepository = driverRepository;
         _publisher = publisher;
+        _logger = logger; 
     }
+
 
     //create vehicle
     public async Task<VehicleDto> CreateVehicle(CreateVehicleRequest request)
     {
+        //log create vehicle event
+         _logger.LogInformation("Creating vehicle with plate {PlateNumber}", request.PlateNumber); 
+
         //controller receives json, it becomes CreateVehicleRequest, the service convert it to a domain entity, and return a dto
         
         //convert input to domain entity
@@ -43,6 +51,10 @@ public class VehicleService
         );
 
         await _repository.AddAsync(vehicle);//send to repository
+
+        //log that the vehicle was created successfully
+        _logger.LogInformation("Vehicle {VehicleId} created successfully", vehicle.Id); 
+    
 
         return new VehicleDto
         {
@@ -113,11 +125,16 @@ public class VehicleService
         var vehicle = await _repository.GetByIdAsync(id);//send to repository - find the vehicle by id
 
         if (vehicle == null)//check if null
+        {
+            _logger.LogWarning("UpdateVehicle: Vehicle {VehicleId} not found", id);//log warning if couldnt update
             return null;
+        }
 
         vehicle.UpdateDetails(request.Model, request.Year, (VehicleType)request.Type);//domain entities control their own state changes-we dont update directly from service
 
         await _repository.UpdateAsync(vehicle);//send to repository - update vehicle
+        //log info that the vehicle was updated successfully
+        _logger.LogInformation("Vehicle {VehicleId} updated — Model: {Model}, Year: {Year}", vehicle.Id, vehicle.Model, vehicle.Year);
 
         return new VehicleDto
         {
@@ -138,9 +155,15 @@ public class VehicleService
         var vehicle = await _repository.GetByIdAsync(id);//send to repository-find the vehicle we want to delete
 
         if (vehicle == null)//check if null
+        {
+            //log warning if couldn't delete
+            _logger.LogWarning("DeleteVehicle: Vehicle {VehicleId} not found", id);
             return false;
+        }
 
         await _repository.DeleteAsync(vehicle);//send to repository-delete vehicle
+        //log that vehicle deleted
+        _logger.LogInformation("Vehicle {VehicleId} deleted", id);
 
         return true;
     }
@@ -148,13 +171,24 @@ public class VehicleService
     //assign driver to a vehicle
     public async Task<bool> AssignDriver(Guid vehicleId, Guid driverId)
     {
+        //log current action
+        _logger.LogInformation("Assigning Driver {DriverId} to Vehicle {VehicleId}", driverId, vehicleId);
+
         var vehicle = await _repository.GetByIdAsync(vehicleId);//send to repository-get the vehicle by id
         if (vehicle == null)//check if null
+        {
+            //log warning if couldnt assign driver because vehicle not found
+            _logger.LogWarning("AssignDriver: Vehicle {VehicleId} not found", vehicleId);
             return false;
+        }
 
         var driver = await _driverRepository.GetByIdAsync(driverId);//send to repository-get driver by id
         if (driver == null)//check if null
+        {
+            //log warning if couldnt assign driver because driver not found
+            _logger.LogWarning("AssignDriver: Driver {DriverId} not found", driverId);
             return false;
+        }
 
         //domain logic
         vehicle.AssignDriver(driver.Id); //assign driver to vehicle
@@ -163,6 +197,9 @@ public class VehicleService
         await _repository.UpdateAsync(vehicle);//send to repository-update vehivle details
         await _driverRepository.UpdateAsync(driver);//send to repository-update driver details
 
+        //log that driver assigned successfully
+        _logger.LogInformation("Driver {DriverId} successfully assigned to Vehicle {VehicleId}", driverId, vehicleId);
+
         //fleet publishes that the driver is assigned
         //Fleet publishes "driver.assigned"  
         //Trip updates cache: DriverStatus = Assigned
@@ -170,7 +207,6 @@ public class VehicleService
             DriverId = driver.Id,
             VehicleId = vehicle.Id
         });
-
 
         return true;
     }
@@ -212,6 +248,9 @@ public class VehicleService
     //change the status of a vehicle
     public async Task ChangeVehicleStatus(Guid vehicleId, VehicleStatus status)
     {
+        //log action we are doing
+        _logger.LogInformation("Changing Vehicle {VehicleId} status to {Status}", vehicleId, status);
+
         var vehicle = await _repository.GetByIdAsync(vehicleId);//send to repository-get the vehicle by id
 
         if (vehicle == null)//check if vehicle exists
@@ -248,6 +287,9 @@ public class VehicleService
                 throw new Exception("Invalid status transition"); //unexpected cases
         }
 
+        //log that vehicle status chanegd
+        _logger.LogInformation("Vehicle {VehicleId} status changed to {Status}", vehicleId, status);
+
         //the fleet publishes that the vehicle status changed
         //Fleet publishes "vehicle.status.changed"
         //Trip updates cache: VehicleStatus = Active
@@ -256,12 +298,10 @@ public class VehicleService
             Status = status.ToString()
         });
 
-
-
         await _repository.UpdateAsync(vehicle);//send to repository-update vehicle
     }
     
-    //update mileage
+    //update mileage — triggered when a trip completes (via RabbitMQ event)
     public async Task UpdateMileage(Guid vehicleId, decimal distanceKm)
     {
         var vehicle = await _repository.GetByIdAsync(vehicleId);
@@ -270,8 +310,10 @@ public class VehicleService
             throw new Exception("Vehicle not found");
 
         vehicle.UpdateMileage(distanceKm);
-
         await _repository.UpdateAsync(vehicle);
+
+        //log that vehicle's mileage got updated
+        _logger.LogInformation("Vehicle {VehicleId} mileage updated by {DistanceKm} km", vehicleId, distanceKm);
     }
     
 }

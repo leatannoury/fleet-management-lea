@@ -1,4 +1,4 @@
-﻿//service for trips
+//service for trips
 //implement use cases of the system
 //controller calls it
 
@@ -12,6 +12,7 @@ using SharedKernel.ValueObjects;
 using TripService.Domain.Enums;
 using SharedKernel.Messaging;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace TripService.Application.Services;
 
@@ -21,13 +22,15 @@ public class TripService
     private readonly TripTrackingService _tripTrackingService;
     private readonly IEventPublisher _publisher;
     private readonly IMemoryCache _cache;
+    private readonly ILogger<TripService> _logger;
 
-    public TripService(ITripRepository tripRepository, TripTrackingService tripTrackingService, IEventPublisher publisher, IMemoryCache cache)
+    public TripService(ITripRepository tripRepository, TripTrackingService tripTrackingService, IEventPublisher publisher, IMemoryCache cache, ILogger<TripService> logger)
     {
         _tripRepository = tripRepository;
         _tripTrackingService = tripTrackingService;
         _publisher = publisher;
         _cache = cache;
+        _logger = logger;
     }
 
    //create a trip
@@ -35,6 +38,10 @@ public class TripService
     {
         //start location and end location are value object named location
         //so we create them from request
+
+        //log that we are creating a trip
+        _logger.LogInformation("Creating trip from {StartAddress} to {EndAddress}", request.StartAddress, request.EndAddress);
+
         var startLocation = new Location(request.StartLat, request.StartLng, request.StartAddress);
         var endLocation = new Location(request.EndLat, request.EndLng, request.EndAddress);
 
@@ -43,6 +50,9 @@ public class TripService
 
         //save in db (send it to repository and repository does it)
         await _tripRepository.AddAsync(trip);
+
+        //log that trip was created
+        _logger.LogInformation("Trip {TripId} created successfully", trip.Id);
 
         //return dto
         return MapToDto(trip);
@@ -83,6 +93,9 @@ public class TripService
    //assign a trip
     public async Task AssignTripAsync(Guid tripId, AssignTripRequest request)
     {
+        //log that we are assigning a trip
+        _logger.LogInformation("Assigning Trip {TripId} to Driver {DriverId} and Vehicle {VehicleId}", tripId, request.DriverId, request.VehicleId);
+
         var trip = await _tripRepository.GetByIdAsync(tripId);//send to repository-get the trip by id
 
         if (trip == null) //check if null
@@ -102,7 +115,10 @@ public class TripService
         //assign vehicle and driver to trip (domain entity validates state transition)
         trip.Assign(request.VehicleId, request.DriverId);
 
-        await _tripRepository.UpdateAsync(trip); //send to repository to update trip
+        await _tripRepository.UpdateAsync(trip);//send to repository to update trip
+
+        //log that trip assigned
+        _logger.LogInformation("Trip {TripId} assigned successfully", tripId);
     }
 
     //start a trip
@@ -112,13 +128,19 @@ public class TripService
     //Calls driverService.MarkDriverOnTrip() → sets Driver status to OnTrip in Fleet DB
     public async Task StartTripAsync(Guid tripId)
     {
-        var trip = await _tripRepository.GetByIdAsync(tripId);//send to repository-get the trip by id
+        //log that we are starting a trip
+        _logger.LogInformation("Starting Trip {TripId}", tripId);
 
+        var trip = await _tripRepository.GetByIdAsync(tripId);//send to repository-get the trip by id
+        
         if (trip == null)//check if null
             throw new DomainException("Trip not found");
 
-        trip.Start(); //start trip
+        trip.Start();//start the trip (domain entity validates state transition)
         
+        //log that trip is in progress
+        _logger.LogInformation("Trip {TripId} is now InProgress", tripId);
+
         //trip publishes that trip started
         //Trip publishes "trip.started"
         //Fleet receives → DriverService.MarkDriverOnTrip()
@@ -144,9 +166,12 @@ public class TripService
 // Calls driverService.MarkDriverAvailable() → updates Driver status in DB → publishes DriverStatusChanged event
     public async Task CompleteTripAsync(Guid tripId)
     {
-        var trip = await _tripRepository.GetByIdAsync(tripId);//send to repository-get the trip by id
+        //log that we are completing a trip
+        _logger.LogInformation("Completing Trip {TripId}", tripId);
 
-        if (trip == null) //check if null
+        var trip = await _tripRepository.GetByIdAsync(tripId);
+
+        if (trip == null)//check if null
             throw new DomainException("Trip not found");
 
         //calculate the distance of the trip based on the logs
@@ -154,9 +179,12 @@ public class TripService
         
         if (calculatedDistance <= 0)//validation for calculated distance
             throw new DomainException("Cannot complete a trip with 0 distance recorded.");
-        
+
         trip.Complete(calculatedDistance);//complete trip
-        
+
+        //log that trip is completed
+        _logger.LogInformation("Trip {TripId} completed. Distance: {DistanceKm} km", tripId, calculatedDistance);
+
         //trip publishes that trip completed
         _publisher.Publish("trip.completed", new TripCompletedEvent
         {
@@ -165,13 +193,16 @@ public class TripService
             DriverId = (Guid)trip.DriverId,
             DistanceKm = trip.DistanceKm ?? 0
         });
-        
+
         await _tripRepository.UpdateAsync(trip);//send to repository-update the trip
     }
 
     //method invoice a trip
     public async Task InvoiceTripAsync(Guid tripId, decimal amount, string currency)
     {
+        //log that trip is invoicing
+        _logger.LogInformation("Invoicing Trip {TripId} — Amount: {Amount} {Currency}", tripId, amount, currency);
+
         var trip = await _tripRepository.GetByIdAsync(tripId);//send to repository- to get trip by id
 
         if (trip == null)//check if null
@@ -182,8 +213,10 @@ public class TripService
 
         //invoice method in the trip entity
         trip.Invoice(cost);
-
-        await _tripRepository.UpdateAsync(trip); //send to repository-update trip
+        await _tripRepository.UpdateAsync(trip);//send to repository-update trip
+        
+        //log that trip is invoiced
+        _logger.LogInformation("Trip {TripId} invoiced successfully", tripId);
     }
 
     

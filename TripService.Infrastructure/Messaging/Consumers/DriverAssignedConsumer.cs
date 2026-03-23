@@ -1,4 +1,4 @@
-﻿//trip consumes fleet events (local cache)
+//trip consumes fleet events (local cache)
 //trip updates its local cache when drivers are assigned
 // trip service should not directly access fleet db
 // trip service needs to know if a driver is available before assigning to a trip. 
@@ -15,17 +15,20 @@ using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using SharedKernel.Events;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Caching.Memory; 
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace TripService.Infrastructure.Messaging.Consumers;
 
 public class DriverAssignedConsumer : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<DriverAssignedConsumer> _logger;
 
-    public DriverAssignedConsumer(IServiceProvider serviceProvider)
+    public DriverAssignedConsumer(IServiceProvider serviceProvider, ILogger<DriverAssignedConsumer> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -43,6 +46,10 @@ public class DriverAssignedConsumer : BackgroundService
             var json = Encoding.UTF8.GetString(ea.Body.ToArray());
             var message = JsonSerializer.Deserialize<DriverAssignedEvent>(json);
 
+            //log that consumer received the event
+            _logger.LogInformation("[CONSUMER] driver.assigned received — DriverId: {DriverId}, VehicleId: {VehicleId}",
+                message?.DriverId, message?.VehicleId);
+
             using var scope = _serviceProvider.CreateScope();
             
             // Fetch the Memory Cache instead of Database
@@ -54,7 +61,6 @@ public class DriverAssignedConsumer : BackgroundService
         };
 
         channel.BasicConsume("driver.assigned", true, consumer);
-
         return Task.CompletedTask;
     }
 }

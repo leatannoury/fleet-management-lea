@@ -16,17 +16,20 @@ using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using SharedKernel.Events;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Caching.Memory; 
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 namespace TripService.Infrastructure.Messaging.Consumers;
 
 public class VehicleStatusChangedConsumer : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<VehicleStatusChangedConsumer> _logger;
 
-    public VehicleStatusChangedConsumer(IServiceProvider serviceProvider)
+    public VehicleStatusChangedConsumer(IServiceProvider serviceProvider, ILogger<VehicleStatusChangedConsumer> logger)
     {
         _serviceProvider = serviceProvider;
+        _logger = logger;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -44,6 +47,10 @@ public class VehicleStatusChangedConsumer : BackgroundService
             var json = Encoding.UTF8.GetString(ea.Body.ToArray());
             var message = JsonSerializer.Deserialize<VehicleStatusChangedEvent>(json);
 
+            //log that consumer received the event
+            _logger.LogInformation("[CONSUMER] vehicle.status.changed received — VehicleId: {VehicleId}, Status: {Status}",
+                message?.VehicleId, message?.Status);
+
             using var scope = _serviceProvider.CreateScope();
             var cache = scope.ServiceProvider.GetRequiredService<IMemoryCache>();
 
@@ -51,7 +58,6 @@ public class VehicleStatusChangedConsumer : BackgroundService
         };
 
         channel.BasicConsume("vehicle.status.changed", true, consumer);
-
         return Task.CompletedTask;
     }
 }
