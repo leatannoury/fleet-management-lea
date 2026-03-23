@@ -1,4 +1,5 @@
-//controller for REST-based trip tracking (HTTP fallback alongside SignalR hub)
+//controller receive request then calls trip Service ->service ->trip repository saves to db
+
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
@@ -16,23 +17,36 @@ public class TripTrackingController : ControllerBase
         _trackingService = trackingService;
     }
 
+    // GET api/trips/tracking/{tripId}/logs
+    [Authorize(Roles = "Admin, Dispatcher, Driver")]
+    [HttpGet("{tripId}/logs")]
+    public async Task<IActionResult> GetLogs(Guid tripId)
+    {
+        var logs = await _trackingService.GetLogsAsync(tripId); //send to service
+        return Ok(logs);
+    }
+
     // POST api/trips/tracking/log
     // Only Drivers (and Admin) can submit GPS location logs
+    //add location log
     [Authorize(Roles = "Admin, Driver")]
     [HttpPost("log")]
     public async Task<IActionResult> AddLog(AddLocationLogRequest request)
     {
-        await _trackingService.AddLocationLogAsync(request); //send to service
+        await _trackingService.AddLocationLogAsync(request);//send to service
         return Ok();
     }
 
     // POST api/trips/tracking/{tripId}/distance
-    // Admin and Dispatcher can query the calculated distance
+    // Admin and Dispatcher can query the calculated 
+    //calculate distance
     [Authorize(Roles = "Admin, Dispatcher")]
     [HttpPost("{tripId}/distance")]
     public async Task<IActionResult> CalculateDistance(Guid tripId)
     {
-        var distance = await _trackingService.CalculateDistanceAsync(tripId); //send to service
+        var distance = await _trackingService.CalculateDistanceAsync(tripId);//send to service
         return Ok(distance);
     }
+
+
 }

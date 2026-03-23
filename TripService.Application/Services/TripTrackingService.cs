@@ -1,4 +1,4 @@
-﻿//service for trip tracking
+//service for trip tracking
 //for logs and distance
 //handle tracking
 
@@ -20,6 +20,19 @@ public class TripTrackingService
         _logRepository = logRepository;
     }
 
+
+    //get all logs for a trip
+    public async Task<List<TripLog>> GetLogsAsync(Guid tripId)
+    {
+        var trip = await _tripRepository.GetByIdAsync(tripId);
+
+        if (trip == null)
+            throw new DomainException("Trip not found");
+
+        var logs = await _logRepository.GetByTripIdAsync(tripId);
+        return logs.OrderBy(l => l.Timestamp).ToList();
+    }
+    
     //add location log
     public async Task AddLocationLogAsync(AddLocationLogRequest request)
     {
@@ -86,4 +99,6 @@ public class TripTrackingService
 
         return totalDistance;
     }
+
+
 }
