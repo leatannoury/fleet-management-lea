@@ -13,7 +13,7 @@ using SharedKernel.ValueObjects;
 using SharedKernel.Messaging;
 using SharedKernel.Events;
 using Microsoft.Extensions.Logging;
-
+using Microsoft.Extensions.Caching.Memory;
 
 
 namespace FleetService.Application.Services;
@@ -24,13 +24,16 @@ public class VehicleService
     private readonly IDriverRepository _driverRepository;
     private readonly IEventPublisher _publisher;
     private readonly ILogger<VehicleService> _logger;
+    private readonly IMemoryCache _cache;
+    private const string VehiclesCacheKey = "vehicles_list"; // key to identify the cached vehicles
 
-    public VehicleService(IVehicleRepository repository, IDriverRepository driverRepository, IEventPublisher publisher, ILogger<VehicleService> logger)
+    public VehicleService(IVehicleRepository repository, IDriverRepository driverRepository, IEventPublisher publisher, ILogger<VehicleService> logger, IMemoryCache cache)
     {
         _repository = repository;
         _driverRepository = driverRepository;
         _publisher = publisher;
-        _logger = logger; 
+        _logger = logger;
+        _cache = cache;
     }
 
 
@@ -55,6 +58,8 @@ public class VehicleService
         //log that the vehicle was created successfully
         _logger.LogInformation("Vehicle {VehicleId} created successfully", vehicle.Id); 
     
+        _cache.Remove(VehiclesCacheKey); //clear cache so next get request fetches fresh data
+        _logger.LogInformation("Vehicle cache invalidated after write operation");
 
         return new VehicleDto
         {
@@ -74,7 +79,22 @@ public class VehicleService
     //with accept filters vehicle status and vehicle type
     public async Task<List<VehicleDto>> GetVehicles(VehicleStatus? status = null, VehicleType? type = null)
     {
-        var vehicles = await _repository.GetAllAsync(); //send to repository-get all vehicles
+
+        //first we try to get from cache 
+        if (!_cache.TryGetValue(VehiclesCacheKey, out List<Vehicle>? vehicles) || vehicles == null)
+        {
+            //Cache miss: fetch from database
+            _logger.LogInformation("Cache miss — fetching vehicles from database");
+
+            vehicles = await _repository.GetAllAsync();//send to repository-get vehicles
+            
+            //save to cache for 5 minutes
+            _cache.Set(VehiclesCacheKey, vehicles, TimeSpan.FromMinutes(5));
+        }
+        else
+        {
+            _logger.LogInformation("Cache hit — returning vehicles from cache");
+        }
 
         //filter result
         if (status.HasValue)
@@ -136,6 +156,9 @@ public class VehicleService
         //log info that the vehicle was updated successfully
         _logger.LogInformation("Vehicle {VehicleId} updated — Model: {Model}, Year: {Year}", vehicle.Id, vehicle.Model, vehicle.Year);
 
+        _cache.Remove(VehiclesCacheKey); //clear cache so next get request fetches fresh data
+        _logger.LogInformation("Vehicle cache invalidated after update operation");
+
         return new VehicleDto
         {
             Id = vehicle.Id,
@@ -164,6 +187,9 @@ public class VehicleService
         await _repository.DeleteAsync(vehicle);//send to repository-delete vehicle
         //log that vehicle deleted
         _logger.LogInformation("Vehicle {VehicleId} deleted", id);
+
+         _cache.Remove(VehiclesCacheKey); //clear cache so next get request fetches fresh data
+        _logger.LogInformation("Vehicle cache invalidated after delete operation");
 
         return true;
     }
@@ -208,6 +234,9 @@ public class VehicleService
             VehicleId = vehicle.Id
         });
 
+         _cache.Remove(VehiclesCacheKey); //clear cache so next get request fetches fresh data
+        _logger.LogInformation("Vehicle cache invalidated after assigning operation");
+
         return true;
     }
     
@@ -240,6 +269,9 @@ public class VehicleService
             VehicleId = vehicleId,
             DriverId = driver?.Id ?? Guid.Empty 
         });
+
+        _cache.Remove(VehiclesCacheKey); //clear cache so next get request fetches fresh data
+        _logger.LogInformation("Vehicle cache invalidated after unassign operation");
 
 
         return true;
@@ -298,6 +330,9 @@ public class VehicleService
             Status = status.ToString()
         });
 
+        _cache.Remove(VehiclesCacheKey); //clear cache so next get request fetches fresh data
+        _logger.LogInformation("Vehicle cache invalidated after changing status operation");
+
         await _repository.UpdateAsync(vehicle);//send to repository-update vehicle
     }
     
@@ -312,8 +347,9 @@ public class VehicleService
         vehicle.UpdateMileage(distanceKm);
         await _repository.UpdateAsync(vehicle);
 
+        _cache.Remove(VehiclesCacheKey); //clear cache so next get request fetches fresh mileage
         //log that vehicle's mileage got updated
-        _logger.LogInformation("Vehicle {VehicleId} mileage updated by {DistanceKm} km", vehicleId, distanceKm);
+        _logger.LogInformation("Vehicle {VehicleId} mileage updated by {DistanceKm} km — cache invalidated", vehicleId, distanceKm);
     }
     
 }

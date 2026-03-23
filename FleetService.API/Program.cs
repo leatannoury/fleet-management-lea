@@ -126,6 +126,9 @@ builder.Services.AddScoped<IDriverRepository, DriverRepository>();
 builder.Services.AddScoped<VehicleService>();
 builder.Services.AddScoped<DriverService>();
 
+builder.Services.AddMemoryCache(); // register in-memory cache
+
+
 //register rabbitmq event publisher
 builder.Services.AddSingleton<IEventPublisher, RabbitMqPublisher>();
 
