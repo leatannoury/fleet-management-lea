@@ -77,11 +77,11 @@ builder.Services.AddEndpointsApiExplorer();
 //register health checks
 builder.Services.AddHealthChecks()
     .AddNpgSql(
-        builder.Configuration.GetConnectionString("FleetDb")!, // test the postgres connection
+        builder.Configuration.GetConnectionString("DefaultConnection")!, // test the postgres connection
         name: "postgresql",
         tags: new[] { "db", "fleet" }
     )
-    .AddRabbitMQ(rabbitConnectionString: "amqp://guest:guest@localhost:15672", // test rabbitmq connection
+    .AddRabbitMQ(rabbitConnectionString: "amqp://guest:guest@localhost:5672", // test rabbitmq connection (port 5672 = AMQP, NOT 15672 which is the web UI)
         name: "rabbitmq",
         tags: new[] { "messaging" }
     );
@@ -116,7 +116,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddDbContext<FleetDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("FleetDb")));//configure fleet dbcontext
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));//configure fleet dbcontext
 
 //register the repositories
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
@@ -151,7 +151,24 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication(); 
 app.UseAuthorization();
 app.MapControllers();
-app.MapHealthChecks("/health"); // expose the /health endpoint
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description
+            })
+        });
+        await context.Response.WriteAsync(result);
+    }
+}); // expose /health with detailed json output
 
 
 app.Run();

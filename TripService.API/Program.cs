@@ -114,11 +114,11 @@ builder.Services.AddEndpointsApiExplorer();
 //register health checks
 builder.Services.AddHealthChecks()
     .AddNpgSql(
-        builder.Configuration.GetConnectionString("TripDb")!, // test the postgres connection
+        builder.Configuration.GetConnectionString("DefaultConnection")!, 
         name: "postgresql",
         tags: new[] { "db", "trip" }
     )
-    .AddRabbitMQ(rabbitConnectionString: "amqp://guest:guest@localhost:15672", // test rabbitmq connection
+    .AddRabbitMQ(rabbitConnectionString: "amqp://guest:guest@localhost:5672", // port 5672 = AMQP (NOT 15672 which is the web UI)
         name: "rabbitmq",
         tags: new[] { "messaging" }
     );
@@ -176,6 +176,23 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<TripService.API.Hubs.TripTrackingHub>("/hubs/trip-tracking");//map the hub
-app.MapHealthChecks("/health"); // expose the /health endpoint
+app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    ResponseWriter = async (context, report) =>
+    {
+        context.Response.ContentType = "application/json";
+        var result = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            status = report.Status.ToString(),
+            checks = report.Entries.Select(e => new
+            {
+                name = e.Key,
+                status = e.Value.Status.ToString(),
+                description = e.Value.Description
+            })
+        });
+        await context.Response.WriteAsync(result);
+    }
+}); // expose /health with detailed json output
 
 app.Run();
