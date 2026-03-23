@@ -22,4 +22,11 @@
         <Using Include="Xunit" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\TripService.Domain\TripService.Domain.csproj" />
+      <ProjectReference Include="..\TripService.Application\TripService.Application.csproj" />
+      <ProjectReference Include="..\TripService.API\TripService.API.csproj" />
+      <ProjectReference Include="..\SharedKernel\SharedKernel.csproj" />
+    </ItemGroup>
+
 </Project>

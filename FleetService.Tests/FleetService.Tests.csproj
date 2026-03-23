@@ -22,4 +22,12 @@
         <Using Include="Xunit" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\FleetService.Domain\FleetService.Domain.csproj" />
+      <ProjectReference Include="..\FleetService.Application\FleetService.Application.csproj" />
+      <ProjectReference Include="..\FleetService.API\FleetService.API.csproj" />
+      <ProjectReference Include="..\FleetService.Infrastructure\FleetService.Infrastructure.csproj" />
+      <ProjectReference Include="..\SharedKernel\SharedKernel.csproj" />
+    </ItemGroup>
+
 </Project>
