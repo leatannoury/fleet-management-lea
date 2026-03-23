@@ -8,10 +8,22 @@ using TripService.Infrastructure.Messaging.Consumers;
 using SharedKernel.Messaging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
+
+
+//configure serilog
+//set up the logger so it write structured json logs to the console
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information() //only log information level and above (not debug/verbose)
+    .WriteTo.Console(outputTemplate: 
+        "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}") //format of the log 
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog(); //tell .net to use serilog as its logger
 
-// Add services to the container.
+//add services to the container
+
 
 builder.Services.AddDbContext<TripDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))); //register trip db context
