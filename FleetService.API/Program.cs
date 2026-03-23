@@ -11,6 +11,7 @@ using SharedKernel.Messaging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using RabbitMQ.Client;
 
 
 //configure serilog
@@ -72,6 +73,19 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 
 builder.Services.AddEndpointsApiExplorer();
+
+//register health checks
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        builder.Configuration.GetConnectionString("FleetDb")!, // test the postgres connection
+        name: "postgresql",
+        tags: new[] { "db", "fleet" }
+    )
+    .AddRabbitMQ(rabbitConnectionString: "amqp://guest:guest@localhost:15672", // test rabbitmq connection
+        name: "rabbitmq",
+        tags: new[] { "messaging" }
+    );
+
 
 builder.Services.AddSwaggerGen(options =>
 {
@@ -137,6 +151,7 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication(); 
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health"); // expose the /health endpoint
 
 
 app.Run();

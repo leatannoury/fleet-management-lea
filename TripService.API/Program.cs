@@ -9,6 +9,8 @@ using SharedKernel.Messaging;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using RabbitMQ.Client;
+
 
 
 //configure serilog
@@ -109,6 +111,18 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
+//register health checks
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        builder.Configuration.GetConnectionString("TripDb")!, // test the postgres connection
+        name: "postgresql",
+        tags: new[] { "db", "trip" }
+    )
+    .AddRabbitMQ(rabbitConnectionString: "amqp://guest:guest@localhost:15672", // test rabbitmq connection
+        name: "rabbitmq",
+        tags: new[] { "messaging" }
+    );
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -162,5 +176,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<TripService.API.Hubs.TripTrackingHub>("/hubs/trip-tracking");//map the hub
+app.MapHealthChecks("/health"); // expose the /health endpoint
 
 app.Run();
