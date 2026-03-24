@@ -52,13 +52,19 @@ public class VehicleStatusChangedConsumer : BackgroundService
             var message = JsonSerializer.Deserialize<VehicleStatusChangedEvent>(json);
 
             //log that consumer received the event
-            _logger.LogInformation("[CONSUMER] vehicle.status.changed received — VehicleId: {VehicleId}, Status: {Status}",
-                message?.VehicleId, message?.Status);
+            _logger.LogInformation("[CONSUMER] vehicle.status.changed received — VehicleId: {VehicleId}, Status: {Status}, Type: {Type}",
+                message?.VehicleId, message?.Status, message?.VehicleType);
 
             using var scope = _serviceProvider.CreateScope();
             var cache = scope.ServiceProvider.GetRequiredService<IMemoryCache>();
 
             cache.Set($"VehicleStatus_{message.VehicleId}", message.Status);
+
+            // [NEW] Cache the vehicle type for pricing calculations (lasts 7 days or any duration)
+            if (!string.IsNullOrEmpty(message.VehicleType))
+            {
+                cache.Set($"VehicleType_{message.VehicleId}", message.VehicleType, TimeSpan.FromDays(7));
+            }
         };
 
         channel.BasicConsume("vehicle.status.changed", true, consumer);

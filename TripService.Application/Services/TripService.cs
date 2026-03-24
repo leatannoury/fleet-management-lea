@@ -23,14 +23,16 @@ public class TripService
     private readonly IEventPublisher _publisher;
     private readonly IMemoryCache _cache;
     private readonly ILogger<TripService> _logger;
+    private readonly ITripPricingStrategy _pricingStrategy;
 
-    public TripService(ITripRepository tripRepository, TripTrackingService tripTrackingService, IEventPublisher publisher, IMemoryCache cache, ILogger<TripService> logger)
+    public TripService(ITripRepository tripRepository, TripTrackingService tripTrackingService, IEventPublisher publisher, IMemoryCache cache, ILogger<TripService> logger, ITripPricingStrategy pricingStrategy)
     {
         _tripRepository = tripRepository;
         _tripTrackingService = tripTrackingService;
         _publisher = publisher;
         _cache = cache;
         _logger = logger;
+        _pricingStrategy = pricingStrategy;
     }
 
    //create a trip
@@ -180,7 +182,17 @@ public class TripService
         if (calculatedDistance <= 0)//validation for calculated distance
             throw new DomainException("Cannot complete a trip with 0 distance recorded.");
 
+        var vehicleType = _cache.Get<string>($"VehicleType_{trip.VehicleId}") ?? "Sedan";
+
+        var costMultiplier = _pricingStrategy.CalculateCost(
+            vehicleType, 
+            calculatedDistance, 
+            trip.StartTime ?? DateTime.UtcNow, 
+            DateTime.UtcNow
+        );
+        
         trip.Complete(calculatedDistance);//complete trip
+        trip.Invoice(new Money(costMultiplier, "USD")); //automatically invoice the trip with calculated cost
 
         //log that trip is completed
         _logger.LogInformation("Trip {TripId} completed. Distance: {DistanceKm} km", tripId, calculatedDistance);
