@@ -45,6 +45,9 @@ builder.Services.AddHostedService<DriverUnassignedConsumer>();
 builder.Services.AddHostedService<DriverStatusChangedConsumer>();
 builder.Services.AddHostedService<VehicleStatusChangedConsumer>();
 
+
+builder.Services.AddScoped<TripService.Application.Interfaces.ITripPricingStrategy, TripService.Application.Services.Strategies.StandardPricingStrategy>();
+
 //keycloak jwt authentication setup
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
