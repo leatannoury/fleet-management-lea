@@ -231,7 +231,7 @@ public class VehicleService
         //Trip updates cache: DriverStatus = Assigned
         _publisher.Publish("driver.assigned", new DriverAssignedEvent {
             DriverId = driver.Id,
-            VehicleId = vehicle.Id
+            VehicleId = vehicle.Id 
         });
 
          _cache.Remove(VehiclesCacheKey); //clear cache so next get request fetches fresh data
@@ -327,7 +327,8 @@ public class VehicleService
         //Trip updates cache: VehicleStatus = Active
         _publisher.Publish("vehicle.status.changed", new VehicleStatusChangedEvent {
             VehicleId = vehicleId,
-            Status = status.ToString()
+            Status = status.ToString(),
+            VehicleType = vehicle.Type.ToString() 
         });
 
         _cache.Remove(VehiclesCacheKey); //clear cache so next get request fetches fresh data
