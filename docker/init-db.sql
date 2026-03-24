@@ -1,0 +1,2 @@
+CREATE DATABASE fleetdb;
+CREATE DATABASE tripdb;

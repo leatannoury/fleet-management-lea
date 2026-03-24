@@ -10,6 +10,7 @@ using SharedKernel.Events;
 using Microsoft.Extensions.DependencyInjection;
 using FleetService.Application.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace FleetService.Infrastructure.Messaging.Consumers;
 
@@ -19,16 +20,19 @@ public class TripCompletedConsumer : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<TripCompletedConsumer> _logger;
+    private readonly string _rabbitHost;
 
-    public TripCompletedConsumer(IServiceProvider serviceProvider, ILogger<TripCompletedConsumer> logger)
+
+    public TripCompletedConsumer(IServiceProvider serviceProvider, ILogger<TripCompletedConsumer> logger, IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _rabbitHost = configuration["RabbitMQ:Host"] ?? "localhost";
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var factory = new ConnectionFactory() { HostName = "localhost" };
+        var factory = new ConnectionFactory() { HostName = _rabbitHost };
         var connection = factory.CreateConnection();
         var channel = connection.CreateModel();
 

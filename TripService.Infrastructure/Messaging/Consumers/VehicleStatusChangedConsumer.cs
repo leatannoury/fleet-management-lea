@@ -18,6 +18,7 @@ using SharedKernel.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace TripService.Infrastructure.Messaging.Consumers;
 
@@ -25,16 +26,19 @@ public class VehicleStatusChangedConsumer : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<VehicleStatusChangedConsumer> _logger;
+    private readonly string _rabbitHost;
 
-    public VehicleStatusChangedConsumer(IServiceProvider serviceProvider, ILogger<VehicleStatusChangedConsumer> logger)
+
+    public VehicleStatusChangedConsumer(IServiceProvider serviceProvider, ILogger<VehicleStatusChangedConsumer> logger, IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _logger = logger;
+        _rabbitHost = configuration["RabbitMQ:Host"] ?? "localhost";
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var factory = new ConnectionFactory() { HostName = "localhost" };
+        var factory = new ConnectionFactory() { HostName = _rabbitHost };
         var connection = factory.CreateConnection();
         var channel = connection.CreateModel();
 

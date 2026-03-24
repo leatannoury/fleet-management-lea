@@ -50,15 +50,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         // tell the api where keycloak lives and which realm to work
-        options.Authority = "http://localhost:8080/realms/fleet-platform";
+        options.Authority = builder.Configuration["Keycloak:Authority"] ?? "http://localhost:8080/realms/fleet-platform";
         
         //disable https requirement (we are now localhost for development
         options.RequireHttpsMetadata = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateAudience = false, // Keycloak doesn't always include the audience, so we disable it for dev
-            ValidateIssuer = true,
-            ValidIssuer = "http://localhost:8080/realms/fleet-platform",
+            ValidateIssuer = false,
+            ValidIssuer = builder.Configuration["Keycloak:Authority"] ?? "http://localhost:8080/realms/fleet-platform",
         };
 
         // Keycloak nests roles inside a complex 'realm_access' JSON object. ASP.NET cannot read this natively.
@@ -111,6 +111,9 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
+// read RabbitMQ host from config (overridden by docker-compose env var)
+var rabbitHost = builder.Configuration["RabbitMQ:Host"] ?? "localhost";
+
 //register health checks
 builder.Services.AddHealthChecks()
     .AddNpgSql(
@@ -118,7 +121,7 @@ builder.Services.AddHealthChecks()
         name: "postgresql",
         tags: new[] { "db", "trip" }
     )
-    .AddRabbitMQ(rabbitConnectionString: "amqp://guest:guest@localhost:5672", // port 5672 = AMQP (NOT 15672 which is the web UI)
+    .AddRabbitMQ(rabbitConnectionString: $"amqp://guest:guest@{rabbitHost}:5672", // test rabbitmq connection
         name: "rabbitmq",
         tags: new[] { "messaging" }
     );
@@ -152,7 +155,8 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 //publish messages
-builder.Services.AddSingleton<IEventPublisher, RabbitMqPublisher>();
+builder.Services.AddSingleton<IEventPublisher>(new RabbitMqPublisher(rabbitHost));
+
 
 
 builder.Services.AddMemoryCache();//register memory cache
@@ -194,5 +198,13 @@ app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks
         await context.Response.WriteAsync(result);
     }
 }); // expose /health with detailed json output
+
+
+// Auto-apply EF Core migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<TripDbContext>(); // use TripDbContext here
+    db.Database.Migrate();
+}
 
 app.Run();

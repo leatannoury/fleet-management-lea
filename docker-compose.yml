@@ -1,0 +1,97 @@
+version: "3.8"
+
+services:
+
+  # ─── PostgreSQL ───────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"           # exposes port to your machine so you can still use pgAdmin
+    volumes:
+      - postgres_data:/var/lib/postgresql/data   # data survives container restarts
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - fleet-network
+
+  # ─── RabbitMQ ─────────────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"           # AMQP port (used by your services)
+      - "15672:15672"         # Management UI (http://localhost:15672)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - fleet-network
+
+  # ─── Keycloak ─────────────────────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    container_name: keycloak
+    command: start-dev          # development mode (no HTTPS requirement)
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_PORT: 8080
+    ports:
+      - "8080:8080"
+    networks:
+      - fleet-network
+
+  # ─── Fleet Service ────────────────────────────────────────────────────────
+  fleetservice:
+    build:
+      context: .                        # build from root of solution
+      dockerfile: FleetService.API/Dockerfile
+    container_name: fleetservice
+    ports:
+      - "5062:8080"                     # your machine:5062 → container:8080
+    environment:
+      # Override the connection string to point to the postgres container
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=fleetdb;Username=postgres;Password=admin
+      # Override RabbitMQ host to use the rabbitmq container name
+      - RabbitMQ__Host=rabbitmq
+      # Override Keycloak to use the keycloak container
+      - Keycloak__Authority=http://keycloak:8080/realms/fleet-platform
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on:
+      - postgres
+      - rabbitmq
+      - keycloak
+    networks:
+      - fleet-network
+
+  # ─── Trip Service ─────────────────────────────────────────────────────────
+  tripservice:
+    build:
+      context: .
+      dockerfile: TripService.API/Dockerfile
+    container_name: tripservice
+    ports:
+      - "5089:8080"                     # your machine:5089 → container:8080
+    environment:
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=tripdb;Username=postgres;Password=admin
+      - RabbitMQ__Host=rabbitmq
+      - Keycloak__Authority=http://keycloak:8080/realms/fleet-platform
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+    depends_on:
+      - postgres
+      - rabbitmq
+      - keycloak
+    networks:
+      - fleet-network
+
+networks:
+  fleet-network:
+    driver: bridge          # all containers on this network can talk to each other by name
+
+volumes:
+  postgres_data:            # named volume — data persists even if containers are removed

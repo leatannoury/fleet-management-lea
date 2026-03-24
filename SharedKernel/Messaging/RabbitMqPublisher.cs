@@ -1,4 +1,4 @@
-﻿// class that send messages (events) to rabbitMQ 
+// class that send messages (events) to rabbitMQ 
 //event publisher
 //actual rabbitmq implementation
 //both trip and fleet can use it
@@ -15,11 +15,11 @@ public class RabbitMqPublisher : IEventPublisher
     private readonly IConnection _connection;
     private readonly IModel _channel;
 
-    public RabbitMqPublisher()
+    public RabbitMqPublisher(string host)
     {
         var factory = new ConnectionFactory()
         {
-            HostName = "localhost" // rabbit mq server
+            HostName = host // rabbit mq server
         };
 
         _connection = factory.CreateConnection();
